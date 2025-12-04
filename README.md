@@ -90,7 +90,7 @@ It supports adding, editing, exporting, importing, and printing inventory report
 
 ### **Editing / Deleting / Adding**
 - **➖ Decrease**: Reduces count by 1. If count reaches 1, confirmation is asked before deletion.  
-- Adds Count by 1  
+- **➕ Add**:Adds Count by 1  
 - **🗑️ Delete**: Permanently deletes row (confirmation required).  
 
 ### **Searching & Sorting**
