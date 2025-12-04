@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TRM Shoe Tracker — B.Nyaga</title>
+  <meta name="theme-color" content="#2c3e50" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👟</text></svg>">
+  
+  <!-- Include SheetJS library for Excel export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+  
+  <style>
+    :root{
+      --bg:#f4f4f4; --card:#fff; --accent:#2980b9; --ok:#27ae60; --warn:#f39c12; --danger:#e74c3c;
+      --muted:#666; --shadow: 0 6px 18px rgba(0,0,0,0.08);
+    }
+    body{font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial; background:var(--bg); margin:18px; color:#222;}
+    h1{ text-align:center; margin-bottom:10px; font-size:1.6rem; }
+    .card{background:var(--card); padding:14px; border-radius:10px; box-shadow:var(--shadow); margin-bottom:12px;}
+    .top-row{display:flex; gap:10px; align-items:center; justify-content:center; flex-wrap:wrap}
+    button{cursor:pointer; border:none; padding:9px 12px; border-radius:8px; color:#fff; font-weight:700}
+    .btn-export{background:var(--accent)}
+    .btn-import{background:#8e44ad}
+    .btn-clear{background:var(--danger)}
+    .btn-save{background:var(--ok)}
+    .btn-print{background:#16a085}
+    form label{display:block;margin-top:8px;font-size:0.95rem}
+    input, select{width:100%; padding:10px; margin-top:6px; border:1px solid #e6e6e6; border-radius:8px; box-sizing:border-box}
+    .search{padding:10px; width:100%; border-radius:8px; border:1px solid #e6e6e6; box-sizing:border-box}
+
+    table{width:100%; border-collapse:collapse; margin-top:12px; background:var(--card); border-radius:8px; overflow:hidden}
+    thead th{padding:12px; text-align:center; border-bottom:1px solid #eee; background:#fafafa; cursor:pointer; position:relative; font-weight:700}
+    tbody td{padding:11px; text-align:center; border-bottom:1px solid #f0f0f0}
+    tbody tr:hover{background:#fcfeff}
+
+    /* arrows */
+    th .arrow{
+      font-size: 0.9em;
+      margin-left: 6px;
+      opacity: 0.45;
+      transition: transform .18s, opacity .18s, color .18s;
+    }
+    th.sort-asc .arrow{ opacity:1; }
+    th.sort-desc .arrow{ opacity:1; }
+
+    /* animations */
+    .row-add { animation: addFlash 1.2s ease; }
+    @keyframes addFlash { 0%{background:#e8f7ea} 60%{background:#e8f7ea} 100%{background:transparent} }
+    .row-delete-flash{ background:#fdecea !important; transform:scale(1.01); }
+    .fade-out{ animation:fadeOut .6s forwards; }
+    @keyframes fadeOut{ to{opacity:0; transform:translateX(-80%);} }
+    .fade-in{ animation:fadeIn .45s ease; }
+    @keyframes fadeIn{ from{opacity:0; transform:translateY(-6px);} to{opacity:1; transform:none} }
+
+    /* modal */
+    #confirmModal{ position:fixed; inset:0; display:none; align-items:center; justify-content:center; background:rgba(0,0,0,.45); z-index:9999 }
+    #confirmBox{ width:360px; background:white; border-radius:12px; padding:18px; text-align:center; box-shadow:0 10px 40px rgba(0,0,0,.28); transform:scale(.95); opacity:0; transition:all .18s }
+    #confirmModal.show #confirmBox{ transform:scale(1); opacity:1 }
+    #confirmMessage{ font-weight:800; margin-bottom:6px }
+    #confirmSub{ color:var(--muted); font-size:0.95rem; margin-bottom:12px }
+    #confirmButtons{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap }
+    .confirm-btn{ padding:8px 12px; border-radius:8px; font-weight:700; color:white; cursor:pointer }
+
+    /* toast */
+    #toast{ position:fixed; right:20px; bottom:20px; background:#222; color:white; padding:12px 16px; border-radius:12px; opacity:0; transform:translateY(10px); transition:all .28s; z-index:9998 }
+    #toast.show{ opacity:1; transform:translateY(0) }
+
+    /* install notification - improved as dismissable popup */
+    #installNotification {
+      position: fixed;
+      bottom: 20px;
+      left: 20px;
+      background: white;
+      border-radius: 12px;
+      padding: 15px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+      z-index: 1001;
+      display: none;
+      max-width: 300px;
+      border-left: 5px solid var(--accent);
+      animation: slideIn 0.3s ease;
+    }
+    
+    @keyframes slideIn {
+      from { transform: translateX(-100px); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    #installNotification p {
+      margin: 0 0 12px 0;
+      font-size: 0.95rem;
+    }
+    
+    #installNotification button {
+      padding: 8px 12px;
+      margin-right: 8px;
+    }
+    
+    #installDismiss {
+      background: var(--muted);
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 8px;
+      border-radius: 50%;
+      font-size: 14px;
+      width: 24px;
+      height: 24px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    /* Size examples */
+    .size-examples {
+      font-size: 0.85rem;
+      color: var(--muted);
+      margin-top: 4px;
+    }
+    
+    /* Size format examples */
+    .size-format-examples {
+      background: #f9f9f9;
+      border-radius: 8px;
+      padding: 10px;
+      margin-top: 10px;
+      border-left: 4px solid var(--accent);
+    }
+    
+    .size-format-examples h4 {
+      margin: 0 0 8px 0;
+      font-size: 0.9rem;
+      color: var(--accent);
+    }
+    
+    .size-format-examples ul {
+      margin: 0;
+      padding-left: 18px;
+      font-size: 0.85rem;
+    }
+    
+    .size-format-examples li {
+      margin-bottom: 4px;
+    }
+    
+    /* Auto-save indicator */
+    #autoSaveIndicator {
+      position: fixed;
+      top: 10px;
+      right: 10px;
+      background: var(--ok);
+      color: white;
+      padding: 5px 10px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      opacity: 0;
+      transition: opacity 0.3s;
+      z-index: 1000;
+    }
+    
+    #autoSaveIndicator.show {
+      opacity: 1;
+    }
+    
+    /* Unsaved changes warning */
+    #unsavedWarning {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: var(--warn);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      z-index: 1000;
+      display: none;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+    }
+    
+    /* Print styles - fixed */
+    @media print {
+      body * {
+        visibility: hidden;
+      }
+      .print-container, .print-container * {
+        visibility: visible;
+      }
+      .print-container {
+        position: absolute;
+        left: 0;
+        top: 0;
+        width: 100%;
+        margin: 0;
+        padding: 20px;
+      }
+      .no-print {
+        display: none !important;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+      }
+      th, td {
+        padding: 10px;
+        text-align: center;
+        border: 1px solid #ddd;
+      }
+      th {
+        background-color: #f0f0f0 !important;
+        -webkit-print-color-adjust: exact;
+        color-adjust: exact;
+      }
+    }
+    
+    /* Tutorial styles - fixed highlighting */
+    .tutorial-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 9990;
+      display: none;
+    }
+    
+    .tutorial-highlight {
+      position: absolute;
+      box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 15px 5px rgba(255, 255, 255, 0.9);
+      border-radius: 8px;
+      z-index: 9995;
+      transition: all 0.5s ease;
+    }
+    
+    .tutorial-container {
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.15);
+      padding: 15px;
+      max-width: 300px;
+      z-index: 10000;
+      display: none;
+    }
+    
+    .tutorial-container h3 {
+      margin-top: 0;
+      color: var(--accent);
+    }
+    
+    .tutorial-buttons {
+      display: flex;
+      justify-content: space-between;
+      margin-top: 15px;
+    }
+    
+    /* Search highlight */
+    .highlight {
+      background-color: #ffeb3b;
+      padding: 2px 0;
+      border-radius: 3px;
+    }
+    
+    /* Loader */
+    .loader {
+      display: inline-block;
+      width: 16px;
+      height: 16px;
+      border: 2px solid rgba(255,255,255,0.3);
+      border-radius: 50%;
+      border-top-color: #fff;
+      animation: spin 1s ease-in-out infinite;
+      margin-right: 8px;
+      vertical-align: middle;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Option for half sizes */
+    .half-size-option {
+      display: flex;
+      align-items: center;
+      margin-top: 8px;
+    }
+    
+    .half-size-option input {
+      width: auto;
+      margin: 0 8px 0 0;
+    }
+    
+    /* Custom keyboard styles */
+    .custom-keyboard {
+      margin-top: 10px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 5px;
+      max-width: 300px;
+      background: #f0f0f0;
+      padding: 10px;
+      border-radius: 10px;
+      border: 1px solid #ddd;
+    }
+    
+    .key-btn {
+      padding: 12px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      background: white;
+      font-size: 1.1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: 600;
+      color: #333;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .key-btn:hover {
+      background: #f0f0f0;
+    }
+    
+    .key-btn:active {
+      background: #e0e0e0;
+      transform: scale(0.95);
+    }
+    
+    .key-btn.backspace {
+      background: #f8f8f8;
+      font-size: 1.2rem;
+      color: #333;
+    }
+    
+    .key-btn.clear {
+      background: #ff6b6b;
+      color: white;
+      font-weight: 700;
+      border-color: #ff6b6b;
+    }
+    
+    .key-btn.done {
+      background: var(--accent);
+      color: white;
+      font-weight: 700;
+      border-color: var(--accent);
+    }
+    
+    .key-btn.space {
+      background: #f8f8f8;
+      font-size: 0.9rem;
+      color: #333;
+    }
+    
+    /* Make slash and asterisk more visible */
+    .key-btn[data-key="/"],
+    .key-btn[data-key="*"] {
+      background: #f5f5f5;
+      font-weight: 700;
+    }
+    
+    /* Make dash and comma stand out */
+    .key-btn[data-key="-"],
+    .key-btn[data-key=","],
+    .key-btn[data-key="."] {
+      background: #f9f9f9;
+    }
+    
+    /* Number buttons */
+    .key-btn[data-key="0"],
+    .key-btn[data-key="1"],
+    .key-btn[data-key="2"],
+    .key-btn[data-key="3"],
+    .key-btn[data-key="4"],
+    .key-btn[data-key="5"],
+    .key-btn[data-key="6"],
+    .key-btn[data-key="7"],
+    .key-btn[data-key="8"],
+    .key-btn[data-key="9"] {
+      background: white;
+      font-weight: 700;
+    }
+    
+    /* Styles for when custom keyboard is active */
+    #sizes:focus {
+      border-color: var(--accent) !important;
+      box-shadow: 0 0 0 2px rgba(41, 128, 185, 0.2) !important;
+      outline: none !important;
+    }
+    
+    @media (max-width: 560px) {
+      .custom-keyboard {
+        max-width: 100% !important;
+        padding: 8px;
+        gap: 4px;
+      }
+      
+      .key-btn {
+        padding: 10px;
+        font-size: 1rem;
+        min-height: 44px;
+      }
+      
+      .key-btn.space {
+        font-size: 0.8rem;
+      }
+      
+      /* Ensure buttons fit properly on small screens */
+      .key-btn[style*="grid-column: span 1"] {
+        padding: 8px;
+      }
+      
+      #confirmBox{ width:92% }
+      .top-row{ gap:8px; }
+      #installNotification {
+        bottom: 10px;
+        left: 10px;
+        right: 10px;
+        max-width: none;
+      }
+      .tutorial-container {
+        bottom: 10px;
+        right: 10px;
+        left: 10px;
+        max-width: none;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>TRM Shoe Tracker</h1>
+
+  <!-- Install Notification (dismissable popup) -->
+  <div id="installNotification" style="display: none;">
+    <button id="installDismiss">×</button>
+    <p>Install TRM Shoe Tracker for a better experience?</p>
+    <button id="installConfirm" style="background: var(--accent)">Install</button>
+    <button id="installLater" style="background: var(--muted)">Not Now</button>
+  </div>
+  
+  <!-- Auto-save indicator -->
+  <div id="autoSaveIndicator">Auto-saved</div>
+  
+  <!-- Unsaved changes warning -->
+  <div id="unsavedWarning">You have unsaved changes! Please save before leaving.</div>
+  
+  <!-- Tutorial overlay -->
+  <div class="tutorial-overlay" id="tutorialOverlay"></div>
+  
+  <!-- Tutorial container -->
+  <div class="tutorial-container no-print" id="tutorialContainer">
+    <h3 id="tutorialTitle">Welcome to TRM Shoe Tracker</h3>
+    <p id="tutorialContent">This app helps you track your shoe inventory. Let's take a quick tour to learn how to use it.</p>
+    <div class="tutorial-buttons">
+      <button id="prevTutorial" style="background: var(--muted)">Previous</button>
+      <button id="nextTutorial" style="background: var(--accent)">Next</button>
+    </div>
+  </div>
+
+<!-- Top Buttons -->
+<div class="card top-row no-print">
+  <button id="exportBtn" class="btn-export">Export Options</button>
+  <button id="importBtn" class="btn-import">Import JSON</button>
+  <button id="clearBtn" class="btn-clear">Clear All</button>
+  <button id="printBtn" class="btn-print">Print Inventory</button>
+  <input id="jsonFileInput" type="file" accept=".json" style="display:none" />
+</div>
+
+<!-- Additional Notes -->
+<div class="card" style="max-width:920px; margin:0 auto;">
+  <label for="exportNotes" style="display:block; margin-top:10px; font-weight:600;">Additional Notes (optional)</label>
+  <textarea id="exportNotes" placeholder="Any observations or notes..." 
+            style="width:100%; padding:8px; border-radius:8px; border:1px solid #ccc; margin-bottom:10px; min-height:60px; resize:vertical;"></textarea>
+</div>
+
+<!-- Entry Form -->
+<div class="card" style="max-width:920px; margin:0 auto;">
+  <form id="entryForm" style="display:block">
+    <label>Brand</label>
+    <input list="brands" id="brand" autocomplete="off" required />
+    <datalist id="brands"></datalist>
+
+    <label>Color</label>
+    <input list="colors" id="color" autocomplete="off" required />
+    <datalist id="colors"></datalist>
+    
+<label>Sizes (comma-separated)</label>
+<div style="position: relative;">
+  <!-- Hidden input that gets focus but doesn't show keyboard -->
+  <input id="sizes-hidden" type="text" 
+         style="position: absolute; opacity: 0; height: 0; width: 0; border: none; padding: 0; margin: 0;" 
+         readonly 
+         tabindex="-1"
+         aria-hidden="true" />
+  
+  <!-- Visible display of the value -->
+  <div id="sizes-display" 
+       style="width: 100%; padding: 10px; margin-top: 6px; border: 1px solid #e6e6e6; border-radius: 8px; box-sizing: border-box; min-height: 44px; background: white; cursor: text;"
+       tabindex="-1">
+    <span id="sizes-value" style="color: #222;"></span>
+    <span id="sizes-placeholder" style="color: #999;">e.g., 38-40, 6/7, 42*3, 10.5</span>
+  </div>
+  
+  <!-- The actual hidden input that stores the value -->
+  <input id="sizes" type="text" readonly style="display: none;" required />
+</div>
+    
+    <!-- Input count indicator -->
+    <div id="inputCount" style="margin-top: 10px; font-size: 0.85rem; color: var(--accent); font-weight: 600;">
+      Input count: 0
+    </div>
+    
+    <!-- Custom numeric keyboard -->
+    <div class="custom-keyboard" style="margin-top: 10px; display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; max-width: 300px;">
+      <!-- First row -->
+      <button type="button" class="key-btn" data-key="1">1</button>
+      <button type="button" class="key-btn" data-key="2">2</button>
+      <button type="button" class="key-btn" data-key="3">3</button>
+      <button type="button" class="key-btn" data-key="/">/</button>
+      
+      <!-- Second row -->
+      <button type="button" class="key-btn" data-key="4">4</button>
+      <button type="button" class="key-btn" data-key="5">5</button>
+      <button type="button" class="key-btn" data-key="6">6</button>
+      <button type="button" class="key-btn" data-key="*">*</button>
+      
+      <!-- Third row -->
+      <button type="button" class="key-btn" data-key="7">7</button>
+      <button type="button" class="key-btn" data-key="8">8</button>
+      <button type="button" class="key-btn" data-key="9">9</button>
+      <button type="button" class="key-btn" data-key="-">-</button>
+      
+      <!-- Fourth row - MODIFIED with clear button -->
+      <button type="button" class="key-btn" data-key=".">.</button>
+      <button type="button" class="key-btn" data-key="0">0</button>
+      <button type="button" class="key-btn" data-key=",">,</button>
+      <button type="button" class="key-btn clear" style="grid-column: span 1;">C</button>
+      <button type="button" class="key-btn backspace" style="grid-column: span 1;">⌫</button>
+      
+      <!-- Fifth row -->
+      <button type="button" class="key-btn space" data-key=" " style="grid-column: span 2;">Space</button>
+      <button type="button" class="key-btn done" style="grid-column: span 2; background: var(--accent); color: white;">Done</button>
+    </div>
+
+    <div class="size-format-examples">
+      <h4>Size Format Examples:</h4>
+      <ul>
+        <li><strong>Single sizes:</strong> 38, 40, 42</li>
+        <li><strong>Ranges:</strong> 38-40 (creates 38, 39, 40)</li>
+        <li><strong>Fractional pairs:</strong> 6/7 (creates 6/7 as a single size)</li>
+        <li><strong>Quantity specification:</strong> 42*3 (creates 3 pairs of size 42)</li>
+        <li><strong>Decimal sizes:</strong> 10.5, 11.5</li>
+        <li><strong>Mixed formats:</strong> 38-40, 42*2, 10.5, 6/7*2</li>
+        <li><strong>Fractional ranges:</strong> 10.5-12.5 (creates 10.5, 11, 11.5, 12, 12.5)</li>
+      </ul>
+    </div>
+    
+    <div class="half-size-option">
+      <input type="checkbox" id="includeHalfSizes">
+      <label for="includeHalfSizes" style="display: inline; margin: 0;">Include half sizes in ranges (e.g., 38-40 will include 38.5, 39.5)</label>
+    </div>
+
+    <div style="display:flex; justify-content:flex-end; margin-top:12px">
+      <button type="submit" class="btn-save">Save Entry</button>
+    </div>
+  </form>
+</div>
+
+<!-- Search Box -->
+<div style="max-width:920px; margin:8px auto 0;">
+  <input id="searchBox" class="search" placeholder="Search by brand, color, or size..." />
+</div>
+
+<!-- Table -->
+<div class="card" style="max-width:920px; margin:12px auto 40px; padding:0;">
+  <table aria-label="Shoe list" style="width:100%;">
+    <thead>
+      <tr>
+        <th data-key="brand">Brand <span class="arrow">▲</span></th>
+        <th data-key="color">Color <span class="arrow">▲</span></th>
+        <th data-key="size">Size <span class="arrow">▲</span></th>
+        <th data-key="count">Count <span class="arrow">▲</span></th>
+        <th class="no-print">Actions</th>
+      </tr>
+    </thead>
+    <tbody id="tableBody"></tbody>
+  </table>
+</div>
+
+<!-- Toast -->
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- Confirm Modal -->
+<div id="confirmModal" role="dialog" aria-modal="true">
+  <div id="confirmBox">
+    <div id="confirmMessage"></div>
+    <div id="confirmSub"></div>
+    <div id="confirmButtons"></div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>
