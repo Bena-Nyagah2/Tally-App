@@ -1,16 +1,54 @@
 {
   "name": "TRM Shoe Tracker",
   "short_name": "Shoe Tracker",
-  "description": "Track your shoe inventory with ease",
+  "description": "Track your shoe inventory with ease - Works Offline",
   "start_url": "./",
   "display": "standalone",
   "background_color": "#f4f4f4",
   "theme_color": "#2c3e50",
-  "orientation": "portrait",
+  "orientation": "portrait-primary",
+  "scope": "./",
+  "id": "/",
   "icons": [
+    {
+      "src": "icons/icon-72.png",
+      "sizes": "72x72",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-96.png",
+      "sizes": "96x96",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-128.png",
+      "sizes": "128x128",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-144.png",
+      "sizes": "144x144",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-152.png",
+      "sizes": "152x152",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
     {
       "src": "icons/icon-192.png",
       "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icons/icon-384.png",
+      "sizes": "384x384",
       "type": "image/png",
       "purpose": "any maskable"
     },
@@ -21,6 +59,30 @@
       "purpose": "any maskable"
     }
   ],
-  "categories": ["productivity", "utilities"],
-  "lang": "en"
+  "screenshots": [
+    {
+      "src": "icons/screenshot-1.png",
+      "sizes": "1280x720",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "categories": ["productivity", "utilities", "business"],
+  "lang": "en",
+  "dir": "ltr",
+  "prefer_related_applications": false,
+  "shortcuts": [
+    {
+      "name": "Add New Shoes",
+      "short_name": "Add",
+      "description": "Add new shoes to inventory",
+      "url": "./?add=true"
+    },
+    {
+      "name": "View Inventory",
+      "short_name": "Inventory",
+      "description": "View current shoe inventory",
+      "url": "./?view=inventory"
+    }
+  ]
 }
