@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>TRM Shoe Tracker</title>
+  <meta name="theme-color" content="#4f46e5" />
+  <meta name="description" content="Track your shoe inventory with ease - Works Offline">
+  
+  <!-- PWA Meta Tags -->
+  <meta name="application-name" content="TRM Tracker">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Shoe Tracker">
+  <link rel="manifest" href="./manifest.json">
+  
+  <!-- Icons -->
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>👟</text></svg>">
+  <link rel="apple-touch-icon" href="icons/icon-152.png">
+
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <!-- Styles -->
+  <link rel="stylesheet" href="style.css">
+  
+  <!-- Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+</head>
+<body>
+
+  <!-- Indicators -->
+  <div id="autoSaveIndicator">Saved</div>
+  <div id="toast" role="status" aria-live="polite"></div>
+  <div id="unsavedWarning" style="display:none; position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--warning); padding:10px 20px; border-radius:var(--radius-md); z-index:100; color:white; font-weight:600; box-shadow:var(--shadow-lg);">You have unsaved changes!</div>
+
+  <!-- Loading Overlay -->
+  <div id="loader" style="display:none; position:fixed; inset:0; background:rgba(255,255,255,0.8); z-index:20000; align-items:center; justify-content:center; backdrop-filter:blur(2px);">
+    <div class="card" style="text-align:center; padding:2rem;">
+      <div style="font-size:2rem; margin-bottom:1rem; animation:spin 1s infinite linear;">↻</div>
+      <div id="loader-text" style="font-weight:600;">Loading...</div>
+    </div>
+  </div>
+
+  <div class="container">
+    
+    <!-- Header -->
+    <header class="app-header">
+      <div class="app-title">
+        <span class="app-logo">👟</span>
+        <div>
+          <h1 style="font-size:1.25rem; margin:0;">TRM Tracker</h1>
+          <div style="font-size:0.75rem; color:var(--text-muted); font-weight:500;">Inventory Management</div>
+        </div>
+      </div>
+      <div id="header-actions">
+        <button id="themeToggleBtn" class="btn-secondary" style="padding: 0.5rem 1rem;">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: text-bottom;">
+            <path d="M8 15A7 7 0 1 0 8 1v14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z"/>
+          </svg> Theme
+        </button>
+        <!-- Tutorial button will be injected here -->
+      </div>
+    </header>
+
+    <!-- Stats Dashboard -->
+    <section id="statsDashboard" class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value" id="stat-total-items">0</div>
+        <div class="stat-label">Total Pairs</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-total-brands">0</div>
+        <div class="stat-label">Brands</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value" id="stat-total-value">-</div>
+        <div class="stat-label">Estimated Value</div>
+      </div>
+    </section>
+
+    <!-- Action Bar -->
+    <section class="action-bar no-print">
+      <button id="updateCatalogBtn" class="btn-catalog">
+        <span>📚</span> Update Catalog
+      </button>
+      <button id="exportBtn" class="btn-export">
+        <span>📤</span> Export Options
+      </button>
+      <button id="importBtn" class="btn-import">
+        <span>📥</span> Import JSON
+      </button>
+      <button id="clearBtn" class="btn-clear">
+        <span>🗑️</span> Clear All
+      </button>
+      <button id="printBtn" class="btn-print">
+        <span>🖨️</span> Print Report
+      </button>
+      <!-- Hidden Inputs -->
+      <input id="catalogFileInput" type="file" accept=".json" style="display:none" />
+      <input id="jsonFileInput" type="file" accept=".json" style="display:none" />
+    </section>
+
+    <!-- Main Content Grid -->
+    <div class="main-grid">
+      
+      <!-- Input Section -->
+      <section class="card">
+        <h2 style="font-size:1.1rem; margin-bottom:1rem;">Add Inventory</h2>
+        <form id="entryForm">
+          <div class="form-grid">
+            <div class="form-group">
+              <label for="brand">Brand</label>
+              <input list="brands" id="brand" placeholder="e.g. Deniro" autocomplete="on" required />
+              <datalist id="brands"></datalist>
+            </div>
+            <div class="form-group">
+              <label for="color">Color</label>
+              <input list="colors" id="color" placeholder="e.g. Red" autocomplete="on" required />
+              <datalist id="colors"></datalist>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Sizes <span style="font-weight:400; color:var(--text-muted);">(Use keyboard below)</span></label>
+            
+            <div class="size-display-wrapper">
+              <input id="sizes-hidden" type="text" class="hidden" readonly tabindex="-1" aria-hidden="true" />
+              
+              <div id="sizes-display" tabindex="0">
+                <span id="sizes-text-before" style="display: none;"></span>
+                <span id="sizes-cursor" style="display: none; background-color: var(--primary); width: 2px; height: 1.2em; margin: 0 1px;"></span>
+                <span id="sizes-text-after" style="display: none;"></span>
+                <span id="sizes-value"></span>
+                <span id="sizes-placeholder" style="color: var(--text-muted);">Select sizes... (e.g. 42, 38-40)</span>
+              </div>
+              
+              <input id="sizes" type="text" readonly style="display: none;" required />
+            </div>
+            
+            <div class="flex justify-between items-center" style="margin-top:0.5rem; margin-bottom: 0.5rem;">
+               <div id="inputCount" style="font-size: 0.85rem; color: var(--primary); font-weight: 600;">Input count: 0</div>
+               
+               <div class="flex items-center gap-2">
+                 <input type="checkbox" id="includeHalfSizes" style="width:auto;">
+                 <label for="includeHalfSizes" style="margin:0; font-weight:400; cursor:pointer;">Half sizes (0.5)</label>
+               </div>
+            </div>
+
+            <!-- Keyboard -->
+            <div class="keyboard-container">
+              <div class="custom-keyboard">
+                <!-- Row 1 -->
+                <button type="button" class="key-btn" data-key="1">1</button>
+                <button type="button" class="key-btn" data-key="2">2</button>
+                <button type="button" class="key-btn" data-key="3">3</button>
+                <button type="button" class="key-btn" data-key="/">/</button>
+                <button type="button" class="key-btn arrow-left">←</button>
+                
+                <!-- Row 2 -->
+                <button type="button" class="key-btn" data-key="4">4</button>
+                <button type="button" class="key-btn" data-key="5">5</button>
+                <button type="button" class="key-btn" data-key="6">6</button>
+                <button type="button" class="key-btn" data-key="*">×</button>
+                <button type="button" class="key-btn arrow-right">→</button>
+                
+                <!-- Row 3 -->
+                <button type="button" class="key-btn" data-key="7">7</button>
+                <button type="button" class="key-btn" data-key="8">8</button>
+                <button type="button" class="key-btn" data-key="9">9</button>
+                <button type="button" class="key-btn" data-key="-">-</button>
+                <button type="button" class="key-btn backspace">⌫</button>
+                
+                <!-- Row 4 -->
+                <button type="button" class="key-btn" data-key=",">,</button>
+                <button type="button" class="key-btn" data-key="0">0</button>
+                <button type="button" class="key-btn" data-key=".">.</button>
+                <button type="button" class="key-btn clear">C</button>
+                <button type="button" class="key-btn done">Save</button>
+                
+                <!-- Row 5 -->
+                <button type="button" class="key-btn space" data-key=" " style="grid-column: span 5;">Space</button>
+              </div>
+            </div>
+            
+            <div style="margin-top:1rem; font-size:0.8rem; color:var(--text-muted); background:var(--bg-body); padding:0.75rem; border-radius:var(--radius-md);">
+              <strong>Tip:</strong> Use <code>-</code> for ranges (38-40), <code>*</code> for quantity (42*3), and <code>/</code> for fractions.
+            </div>
+          </div>
+        </form>
+      </section>
+
+      <!-- Inventory Section -->
+      <section>
+        <div class="search-container">
+          <span class="search-icon">🔍</span>
+          <input id="searchBox" class="search-input" placeholder="Search by brand, color, or size..." />
+        </div>
+
+        <div class="card" style="padding:0; overflow:hidden;">
+          <div class="table-container">
+            <table aria-label="Shoe list">
+              <thead>
+                <tr>
+                  <th data-key="brand">Brand <span class="arrow"></span></th>
+                  <th data-key="color">Color <span class="arrow"></span></th>
+                  <th data-key="size">Size <span class="arrow"></span></th>
+                  <th data-key="count">Count <span class="arrow"></span></th>
+                  <th class="no-print" style="text-align:center">Actions</th>
+                </tr>
+              </thead>
+              <tbody id="tableBody">
+                <!-- Rows injected by JS -->
+              </tbody>
+            </table>
+          </div>
+          <div style="padding:1rem; text-align:right; background:var(--bg-body); font-weight:600; font-size:0.9rem;">
+             Total Items: <span id="totalCount">0</span>
+          </div>
+        </div>
+        
+        <!-- Notes Section -->
+        <div class="card">
+          <label for="exportNotes">Notes</label>
+          <div class="toolbar" style="margin-bottom: 5px; display: flex; gap: 5px;">
+            <button type="button" class="btn-secondary" id="fmtBold" title="Bold" style="padding: 2px 8px; font-weight: bold;">B</button>
+            <button type="button" class="btn-secondary" id="fmtItalic" title="Italic" style="padding: 2px 8px; font-style: italic;">I</button>
+            <button type="button" class="btn-secondary" id="fmtList" title="List" style="padding: 2px 8px;">• List</button>
+          </div>
+          <textarea id="exportNotes" placeholder="Add any notes about this inventory..." rows="3" style="resize:vertical;"></textarea>
+        </div>
+      </section>
+      
+    </div>
+  </div>
+
+  <!-- Modal -->
+  <div id="confirmModal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:10000; align-items:center; justify-content:center;">
+    <div id="confirmBox" class="card" style="width:90%; max-width:400px; animation:modalPop 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275);">
+      <h3 id="confirmMessage" style="margin-bottom:0.5rem;">Confirm</h3>
+      <p id="confirmSub" style="color:var(--text-muted); margin-bottom:1.5rem;"></p>
+      <div id="confirmButtons" class="flex justify-between gap-2"></div>
+    </div>
+  </div>
+
+  <style>
+    @keyframes modalPop { from { transform: scale(0.9); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+
+  <script src="app.js"></script>
+  <script>
+    // Service Worker & Offline Logic (Inline for simplicity)
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js').catch(console.error);
+      });
+    }
+  </script>
+</body>
+</html>
