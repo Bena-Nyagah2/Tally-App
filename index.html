@@ -22,13 +22,14 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  
+
   <!-- Styles -->
   <link rel="stylesheet" href="style.css">
 
   <!-- Scripts -->
   <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
 
@@ -57,6 +58,9 @@
         </div>
       </div>
       <div id="header-actions">
+        <button id="themeToggleBtn" class="btn-secondary" style="padding: 0.5rem 1rem;">
+          <span>🌓</span> Theme
+        </button>
         <!-- Tutorial button will be injected here -->
       </div>
     </header>
@@ -79,8 +83,11 @@
 
     <!-- Action Bar -->
     <section class="action-bar no-print">
+      <button id="updateCatalogBtn" class="btn-catalog">
+        <span>📚</span> Update Catalog
+      </button>
       <button id="exportBtn" class="btn-export">
-        <span>📤</span> Export / Catalog
+        <span>📤</span> Export Options
       </button>
       <button id="importBtn" class="btn-import">
         <span>📥</span> Import JSON

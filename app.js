@@ -1712,7 +1712,7 @@ function addTutorialButton() {
                     </tbody>
                   </table>
                   ${notes ? `<div style="padding:10px; border-left:4px solid #2980b9; background:#f9f9f9; margin-top:20px;">
-                    <strong>Notes:</strong><br>${escapeHtml(notes)}
+                    <strong>Notes:</strong><br>${typeof marked !== 'undefined' ? marked.parse(notes) : escapeHtml(notes)}
                   </div>` : ''}
                   <p style="margin-top:30px; font-size:0.85rem; text-align:center; color:#666;">
                     Generated on: ${new Date().toLocaleString()}<br>
@@ -1757,6 +1757,28 @@ function addTutorialButton() {
         });
         
         catalogFileInput.addEventListener("change", handleCatalogUpload);
+      }
+
+      // Theme Toggle Logic
+      const themeToggleBtn = document.getElementById("themeToggleBtn");
+      if (themeToggleBtn) {
+        // Load saved theme
+        const savedTheme = localStorage.getItem("shoe_tracker_theme");
+        if (savedTheme) {
+          document.body.classList.add(savedTheme);
+        }
+
+        themeToggleBtn.addEventListener("click", () => {
+          if (document.body.classList.contains("dark-mode")) {
+            document.body.classList.remove("dark-mode");
+            document.body.classList.add("light-mode");
+            localStorage.setItem("shoe_tracker_theme", "light-mode");
+          } else {
+            document.body.classList.remove("light-mode");
+            document.body.classList.add("dark-mode");
+            localStorage.setItem("shoe_tracker_theme", "dark-mode");
+          }
+        });
       }
 
       // Tutorial on first visit
