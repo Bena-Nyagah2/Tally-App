@@ -673,128 +673,40 @@ function showTutorialStep(stepIndex) {
   // Create new tutorial modal
   const tutorialModal = document.createElement("div");
   tutorialModal.id = "tutorialModal";
-  tutorialModal.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.85);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    z-index: 10000;
-    padding: 20px;
-  `;
+  tutorialModal.className = "tutorial-modal";
   
   const modalContent = `
-    <div style="
-      background: white;
-      border-radius: 15px;
-      padding: 30px;
-      max-width: 500px;
-      width: 90%;
-      box-shadow: 0 10px 40px rgba(0,0,0,0.3);
-      position: relative;
-      animation: fadeIn 0.3s ease;
-    ">
-      <button id="tutorialClose" style="
-        position: absolute;
-        top: 15px;
-        right: 15px;
-        background: none;
-        border: none;
-        font-size: 24px;
-        color: #999;
-        cursor: pointer;
-        width: 30px;
-        height: 30px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      ">&times;</button>
+    <div class="tutorial-content">
+      <button id="tutorialClose" class="tutorial-close">&times;</button>
       
-      <div style="text-align: center; margin-bottom: 25px;">
-        <div style="
-          background: var(--accent);
-          color: white;
-          width: 70px;
-          height: 70px;
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          margin: 0 auto 20px;
-          font-size: 32px;
-          box-shadow: 0 4px 15px rgba(41, 128, 185, 0.3);
-        ">
+      <div class="tutorial-header">
+        <div class="tutorial-icon">
           ${step.icon}
         </div>
-        <h3 style="margin: 0 0 15px 0; color: var(--accent); font-size: 1.4rem;">${step.title}</h3>
-        <p style="color: #555; line-height: 1.6; text-align: left; font-size: 1rem;">
+        <h3 class="tutorial-title">${step.title}</h3>
+        <div class="tutorial-text">
           ${step.content}
-        </p>
+        </div>
       </div>
       
-      <div style="
-        display: flex;
-        justify-content: center;
-        margin-top: 25px;
-        gap: 8px;
-      ">
+      <div class="tutorial-dots">
         ${tutorialSteps.map((_, i) => `
-          <div id="stepDot${i}" style="
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: ${i === stepIndex ? 'var(--accent)' : '#ddd'};
-            cursor: pointer;
-            transition: background 0.3s;
-          " data-step="${i}"></div>
+          <div id="stepDot${i}" class="tutorial-dot ${i === stepIndex ? 'active' : ''}" data-step="${i}"></div>
         `).join('')}
       </div>
       
-      <div style="display: flex; justify-content: space-between; margin-top: 30px;">
-        <button id="tutorialPrev" style="
-          padding: 12px 25px;
-          background: ${stepIndex === 0 ? '#f0f0f0' : 'var(--accent)'};
-          color: ${stepIndex === 0 ? '#999' : 'white'};
-          border: none;
-          border-radius: 10px;
-          font-weight: bold;
-          cursor: ${stepIndex === 0 ? 'not-allowed' : 'pointer'};
-          font-size: 1rem;
-          opacity: ${stepIndex === 0 ? '0.6' : '1'};
-          transition: all 0.2s;
-        " ${stepIndex === 0 ? 'disabled' : ''}>
+      <div class="tutorial-actions">
+        <button id="tutorialPrev" class="btn-secondary" ${stepIndex === 0 ? 'disabled' : ''} style="${stepIndex === 0 ? 'opacity: 0.5; cursor: not-allowed;' : ''}">
           ← Previous
         </button>
         
-        <button id="tutorialNext" style="
-          padding: 12px 30px;
-          background: var(--accent);
-          color: white;
-          border: none;
-          border-radius: 10px;
-          font-weight: bold;
-          cursor: pointer;
-          font-size: 1rem;
-          transition: all 0.2s;
-        ">
+        <button id="tutorialNext" class="btn-primary">
           ${stepIndex === tutorialSteps.length - 1 ? 'Finish 🎉' : 'Next →'}
         </button>
       </div>
       
-      <div style="text-align: center; margin-top: 20px;">
-        <button id="tutorialSkip" style="
-          background: none;
-          border: none;
-          color: #666;
-          cursor: pointer;
-          font-size: 0.9rem;
-          text-decoration: underline;
-        ">
+      <div class="tutorial-skip">
+        <button id="tutorialSkip" class="tutorial-skip-btn">
           Skip Tutorial
         </button>
       </div>
@@ -1411,43 +1323,47 @@ function addTutorialButton() {
   ------------------------ */
   function showCatalogInfo() {
     try {
-      if (!masterCatalog) {
-        toast("ℹ️ No catalog loaded. Please upload a catalog file first.", "#f39c12");
-        return;
+      let message = "📚 No Catalog Loaded";
+      let subtext = "Upload a JSON file to enable smart suggestions for brands and colors.";
+
+      if (masterCatalog) {
+        const brandCount = Object.keys(masterCatalog).length;
+        let colorCount = 0;
+        Object.values(masterCatalog).forEach(colors => {
+          if (Array.isArray(colors)) {
+            colorCount += colors.length;
+          }
+        });
+        message = `📚 Current Catalog: ${brandCount} Brands`;
+        subtext = `Total color options: ${colorCount}\nCatalog is stored locally in your browser.`;
       }
       
-      const brandCount = Object.keys(masterCatalog).length;
-      let colorCount = 0;
-      Object.values(masterCatalog).forEach(colors => {
-        if (Array.isArray(colors)) {
-          colorCount += colors.length;
-        }
-      });
-      
-      openModal({
-        message: `📚 Current Catalog: ${brandCount} Brands`,
-        subtext: `Total color options: ${colorCount}\nCatalog is stored locally in your browser.`,
-        buttons: [
-          { 
-            label: "Clear Catalog", 
-            color: "var(--danger)", 
-            onClick: () => clearCatalog()
-          },
-          { 
-            label: "Update Catalog", 
-            color: "#2c3e50", 
-            onClick: () => {
-              const catalogFileInput = document.getElementById("catalogFileInput");
-              if (catalogFileInput) catalogFileInput.click();
-            }
-          },
-          { 
-            label: "OK", 
-            color: "#888", 
-            onClick: () => {} 
+      const buttons = [
+        {
+          label: "Update/Upload Catalog",
+          color: "#2c3e50",
+          onClick: () => {
+            const catalogFileInput = document.getElementById("catalogFileInput");
+            if (catalogFileInput) catalogFileInput.click();
           }
-        ]
+        }
+      ];
+      
+      if (masterCatalog) {
+        buttons.unshift({
+          label: "Clear Catalog",
+          color: "var(--danger)",
+          onClick: () => clearCatalog()
+        });
+      }
+
+      buttons.push({
+        label: "Close",
+        color: "#888",
+        onClick: () => {}
       });
+
+      openModal({ message, subtext, buttons });
     } catch (error) {
       console.error("Error showing catalog info:", error);
       toast("❌ Error showing catalog info", "#e74c3c");
