@@ -847,23 +847,17 @@ function addTutorialButton() {
   const existingBtn = document.getElementById("showTutorialBtn");
   if (existingBtn) existingBtn.remove();
   
-  // Add tutorial button to top row
-  const topRow = document.querySelector('.top-row');
-  if (topRow && !document.getElementById("showTutorialBtn")) {
+  // Add tutorial button to header actions
+  const headerActions = document.getElementById('header-actions');
+  if (headerActions) {
     const tutorialBtn = document.createElement('button');
     tutorialBtn.id = 'showTutorialBtn';
-    tutorialBtn.className = 'btn-install';
-    tutorialBtn.textContent = 'Show Tutorial';
-    tutorialBtn.style.background = '#16a085';
+    tutorialBtn.className = 'btn-secondary';
+    tutorialBtn.innerHTML = '<span>🎓</span> Tutorial';
+    tutorialBtn.style.padding = '0.5rem 1rem';
     tutorialBtn.addEventListener('click', showTutorial);
     
-    // Insert after export button
-    const exportBtn = document.getElementById('exportBtn');
-    if (exportBtn) {
-      exportBtn.parentNode.insertBefore(tutorialBtn, exportBtn.nextSibling);
-    } else {
-      topRow.appendChild(tutorialBtn);
-    }
+    headerActions.appendChild(tutorialBtn);
   }
 }
 
@@ -994,11 +988,24 @@ function addTutorialButton() {
 
   function render(filter="", highlightIds=[]){
     try {
-      const tbody = $("tableBody");
+      const tbody = document.getElementById("tableBody");
       if (!tbody) return;
       
       tbody.innerHTML = "";
       let rows = loadData();
+
+      // Update Dashboard Stats
+      const totalPairs = rows.reduce((acc, r) => acc + (parseInt(r.count) || 0), 0);
+      const uniqueBrands = new Set(rows.map(r => r.brand.toLowerCase().trim())).size;
+
+      const statTotalItems = document.getElementById("stat-total-items");
+      if(statTotalItems) statTotalItems.textContent = totalPairs;
+
+      const statTotalBrands = document.getElementById("stat-total-brands");
+      if(statTotalBrands) statTotalBrands.textContent = uniqueBrands;
+
+      const totalCount = document.getElementById("totalCount");
+      if(totalCount) totalCount.textContent = totalPairs;
 
       if(currentSort.key){
         const k = currentSort.key;
@@ -1048,8 +1055,8 @@ function addTutorialButton() {
       if (view.length === 0) {
         const tr = document.createElement("tr");
         tr.innerHTML = `
-          <td colspan="5" style="text-align:center; padding:40px; color:#888;">
-            ${q ? 'No items match your search' : 'No items yet. Add some shoes!'}
+          <td colspan="5" style="text-align:center; padding:3rem; color:var(--text-muted);">
+            ${q ? 'No items match your search' : 'No shoes in inventory.<br>Add your first pair above!'}
           </td>
         `;
         tbody.appendChild(tr);
@@ -1063,15 +1070,16 @@ function addTutorialButton() {
           const colorHtml = highlightText(r.color || "", q);
           const sizeHtml = highlightText(r.size || "", q);
           
+          // Added data-label for mobile card view responsiveness
           tr.innerHTML = `
-            <td>${brandHtml}</td>
-            <td>${colorHtml}</td>
-            <td>${sizeHtml}</td>
-            <td>${r.count}</td>
-            <td class="no-print" style="display:flex;gap:8px; justify-content:center">
-              <button class="btn-increase" data-id="${r.id}" style="background:#27ae60;padding:6px 10px;border-radius:8px;color:#fff;font-weight:800">➕</button>
-              <button class="btn-decrease" data-id="${r.id}" style="background:#f39c12;padding:6px 10px;border-radius:8px;color:#fff;font-weight:800">➖</button>
-              <button class="btn-delete" data-id="${r.id}" style="background:#e74c3c;padding:6px 10px;border-radius:8px;color:#fff;font-weight:800">🗑️</button>
+            <td data-label="Brand">${brandHtml}</td>
+            <td data-label="Color">${colorHtml}</td>
+            <td data-label="Size">${sizeHtml}</td>
+            <td data-label="Count">${r.count}</td>
+            <td class="no-print" style="display:flex; gap:0.5rem; justify-content:center; align-items:center;">
+              <button class="btn-increase btn-icon" data-id="${r.id}" style="background:var(--success); color:white;">➕</button>
+              <button class="btn-decrease btn-icon" data-id="${r.id}" style="background:var(--warning); color:white;">➖</button>
+              <button class="btn-delete btn-icon" data-id="${r.id}" style="background:var(--danger); color:white;">🗑️</button>
             </td>`;
           tbody.appendChild(tr);
         });
@@ -1093,21 +1101,11 @@ function addTutorialButton() {
         if (!arrow) return;
         
         if(currentSort.key === th.dataset.key){
-          if(currentSort.dir === "asc"){
-            th.classList.add("sort-asc");
-            th.classList.remove("sort-desc");
-            arrow.textContent = "▲";
-            arrow.style.color = "var(--ok)";
-          } else {
-            th.classList.add("sort-desc");
-            th.classList.remove("sort-asc");
-            arrow.textContent = "▼";
-            arrow.style.color = "var(--danger)";
-          }
+          arrow.textContent = currentSort.dir === "asc" ? "▲" : "▼";
+          arrow.style.color = "var(--primary)";
         } else {
-          arrow.textContent = "▲";
-          arrow.style.color = "#aaa";
-          th.classList.remove("sort-asc","sort-desc");
+          arrow.textContent = "↕";
+          arrow.style.color = "var(--border)";
         }
       });
 
