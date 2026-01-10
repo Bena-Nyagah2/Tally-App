@@ -1532,20 +1532,54 @@ function addTutorialButton() {
           
           const reader = new FileReader();
           reader.onload = function(ev){
-            try{
-              let json = JSON.parse(ev.target.result);
-              
-              // Try to parse as JavaScript format if regular JSON fails
-              if (!Array.isArray(json)) {
+            try {
+              let json;
+              try {
+                json = JSON.parse(ev.target.result);
+              } catch (e) {
+                // If standard JSON parse fails, try the JS format
                 try {
                   json = parseJavaScriptJSON(ev.target.result);
                 } catch (jsError) {
-                  throw new Error("Invalid JSON format. File should contain an array of shoe entries.");
+                  throw new Error("Invalid format. Please check your file.");
                 }
               }
               
-              if(!Array.isArray(json)) {
-                throw new Error("Invalid format: data should be an array");
+              // Check if it's a Catalog (Object) or Inventory (Array)
+              if (!Array.isArray(json)) {
+                // It might be a catalog object
+                const validation = validateCatalog(json);
+                if (validation.valid) {
+                  hideLoader();
+                  openModal({
+                    message: "Catalog Detected",
+                    subtext: "This file looks like a master catalog. Do you want to update your brand/color options?",
+                    buttons: [
+                      {
+                        label: "Yes, Update Catalog",
+                        color: "var(--ok)",
+                        onClick: () => {
+                          if (saveCatalog(json)) {
+                            updateDatalists();
+                            updateColorDatalist(document.getElementById("brand").value.trim());
+                            toast("✅ Catalog updated successfully!", "#27ae60");
+                          } else {
+                            toast("❌ Error saving catalog", "#e74c3c");
+                          }
+                        }
+                      },
+                      {
+                        label: "No, Cancel",
+                        color: "#888",
+                        onClick: () => {}
+                      }
+                    ]
+                  });
+                  return;
+                } else {
+                  // Not a valid catalog and not an array
+                  throw new Error("Invalid format: File should be an array of shoes or a valid catalog object.");
+                }
               }
               
               if (json.length === 0) {
