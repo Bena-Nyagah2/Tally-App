@@ -620,32 +620,32 @@ const tutorialSteps = [
   {
     title: "Welcome to TRM Shoe Tracker 👟",
     content: "This app helps you track your shoe inventory efficiently. Let's take a quick tour!",
-    icon: "👟"
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16"><path d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.886.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01L8 2.748zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143c.06.055.119.112.176.171a3.12 3.12 0 0 1 .176-.17C12.72-3.042 23.333 4.867 8 15z"/></svg>`
   },
   {
     title: "Adding Shoes",
     content: "1. Enter brand name<br>2. Enter color<br>3. Use the custom keyboard for sizes (e.g., '38-40' or '42*3')<br>4. Click Save",
-    icon: "➕"
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16"><path d="M8 4a.5.5 0 0 1 .5.5v3h3a.5.5 0 0 1 0 1h-3v3a.5.5 0 0 1-1 0v-3h-3a.5.5 0 0 1 0-1h3v-3A.5.5 0 0 1 8 4z"/></svg>`
   },
   {
     title: "Managing Inventory",
     content: "Your shoes appear in the table below:<br>• Click ➕ to increase count<br>• Click ➖ to decrease count<br>• Click 🗑️ to delete an item",
-    icon: "📊"
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M0 2a2 2 0 0 1 2-2h12a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2V2zm15 2h-4v3h4V4zm0 4h-4v3h4V8zm0 4h-4v3h3a1 1 0 0 0 1-1v-2zm-5 3v-3H6v3h4zm-5 0v-3H1v2a1 1 0 0 0 1 1h3zm-4-4h4V8H1v3zm0-4h4V4H1v3zm5-3v3h4V4H6zm4 8H6v3h4v-3z"/></svg>`
   },
   {
     title: "Search & Sort",
     content: "• Use the search box to filter by brand, color, or size<br>• Click column headers to sort (▲ for ascending, ▼ for descending)",
-    icon: "🔍"
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16"><path d="M11.742 10.344a6.5 6.5 0 1 0-1.397 1.398h-.001c.03.04.062.078.098.115l3.85 3.85a1 1 0 0 0 1.415-1.414l-3.85-3.85a1.007 1.007 0 0 0-.115-.1zM12 6.5a5.5 5.5 0 1 1-11 0 5.5 5.5 0 0 1 11 0z"/></svg>`
   },
   {
     title: "Export & Import",
     content: "• <strong>Export Options</strong>: Create JSON or Excel files<br>• <strong>Import JSON</strong>: Add or replace data<br>• <strong>Print Inventory</strong>: Generate PDF report",
-    icon: "📁"
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>`
   },
   {
     title: "Catalog & Smart Suggestions",
     content: "• Click <strong>Update Catalog</strong> to upload brand/color data<br>• Get smart auto-complete suggestions as you type!",
-    icon: "📚"
+    icon: `<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="currentColor" viewBox="0 0 16 16"><path d="M1 2.828c.885-.37 2.154-.769 3.388-.893 1.33-.134 2.458.063 3.112.752v9.746c-.935-.53-2.12-.603-3.213-.493-1.18.12-2.37.461-3.287.811V2.828zm7.5-.141c.654-.689 1.782-.886 3.112-.752 1.234.124 2.503.523 3.388.893v9.923c-.918-.35-2.107-.692-3.287-.81-1.094-.111-2.278-.039-3.213.492V2.687zM8 1.783C7.015.936 5.587.81 4.287.94c-1.514.153-3.042.672-3.994 1.105A.5.5 0 0 0 0 2.5v11a.5.5 0 0 0 .707.455c.882-.4 2.303-.881 3.68-1.02 1.409-.142 2.59.087 3.223.877a.5.5 0 0 0 .78 0c.633-.79 1.814-1.019 3.222-.877 1.378.139 2.8.62 3.681 1.02A.5.5 0 0 0 16 13.5v-11a.5.5 0 0 0-.293-.455c-.952-.433-2.48-.952-3.994-1.105C10.413.809 8.985.936 8 1.783z"/></svg>`
   }
 ];
 
@@ -680,7 +680,7 @@ function showTutorialStep(stepIndex) {
       <button id="tutorialClose" class="tutorial-close">&times;</button>
       
       <div class="tutorial-header">
-        <div class="tutorial-icon">
+        <div class="tutorial-icon" style="color: var(--primary);">
           ${step.icon}
         </div>
         <h3 class="tutorial-title">${step.title}</h3>
@@ -765,7 +765,7 @@ function addTutorialButton() {
     const tutorialBtn = document.createElement('button');
     tutorialBtn.id = 'showTutorialBtn';
     tutorialBtn.className = 'btn-secondary';
-    tutorialBtn.innerHTML = '<span>🎓</span> Tutorial';
+    tutorialBtn.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: text-bottom;"><path d="M16 8A8 8 0 1 1 0 8a8 8 0 0 1 16 0zM9.283 4.002V12H7.971V5.338h-.065L6.072 6.656V5.385l1.899-1.383h1.312z"/></svg> Tutorial';
     tutorialBtn.style.padding = '0.5rem 1rem';
     tutorialBtn.addEventListener('click', showTutorial);
     
@@ -1424,6 +1424,49 @@ function addTutorialButton() {
           saveNotes();
           markAsUnsaved();
         });
+
+        // Format Buttons
+        const fmtBold = document.getElementById("fmtBold");
+        const fmtItalic = document.getElementById("fmtItalic");
+        const fmtList = document.getElementById("fmtList");
+
+        if(fmtBold && fmtItalic && fmtList){
+          const insertFormat = (before, after) => {
+            const start = exportNotes.selectionStart;
+            const end = exportNotes.selectionEnd;
+            const text = exportNotes.value;
+            const selection = text.substring(start, end);
+            const replacement = before + selection + after;
+            exportNotes.value = text.substring(0, start) + replacement + text.substring(end);
+            exportNotes.focus();
+            exportNotes.selectionStart = start + before.length;
+            exportNotes.selectionEnd = end + before.length;
+            saveNotes();
+            markAsUnsaved();
+          };
+
+          fmtBold.addEventListener("click", () => insertFormat("**", "**"));
+          fmtItalic.addEventListener("click", () => insertFormat("*", "*"));
+          fmtList.addEventListener("click", () => {
+             // For list, if we have a selection, we want to prepend "- " to each line
+             // If no selection or just cursor, insert "- "
+             const start = exportNotes.selectionStart;
+             const end = exportNotes.selectionEnd;
+             const text = exportNotes.value;
+
+             if(start === end) {
+               insertFormat("\n- ", "");
+             } else {
+               const selection = text.substring(start, end);
+               // Simple multiline handling
+               const lines = selection.split('\n');
+               const formatted = lines.map(line => `- ${line}`).join('\n');
+               exportNotes.value = text.substring(0, start) + formatted + text.substring(end);
+               saveNotes();
+               markAsUnsaved();
+             }
+          });
+        }
       }
 
       // Half-size preference
@@ -1691,10 +1734,16 @@ function addTutorialButton() {
 
               // Build PDF content
               const pdfContent = `
-                <div style="font-family: Arial, sans-serif; color: #333;">
-                  <h1 style="text-align:center; color:#2c3e50;">TRM Shoe Tracker - Inventory Report</h1>
+                <div style="font-family: Arial, sans-serif; color: #000; background: #fff;">
+                  <style>
+                    body, table, th, td, div, p { color: #000 !important; background: #fff !important; }
+                    table { border-color: #000 !important; }
+                    th, td { border: 1px solid #000 !important; }
+                    th { background-color: #f0f0f0 !important; font-weight: bold; }
+                  </style>
+                  <h1 style="text-align:center; color:#000;">TRM Shoe Tracker - Inventory Report</h1>
                   <table border="1" cellspacing="0" cellpadding="6" 
-                         style="width:100%; border-collapse:collapse; margin-bottom:20px; text-align:center; font-size:0.9rem;">
+                         style="width:100%; border-collapse:collapse; margin-bottom:20px; text-align:center; font-size:0.9rem; border: 1px solid #000;">
                     <thead>
                       <tr style="background:#f0f0f0;">
                         <th>Brand</th><th>Color</th><th>Size</th><th>Count</th>
@@ -1711,10 +1760,10 @@ function addTutorialButton() {
                       `).join('')}
                     </tbody>
                   </table>
-                  ${notes ? `<div style="padding:10px; border-left:4px solid #2980b9; background:#f9f9f9; margin-top:20px;">
+                  ${notes ? `<div style="padding:10px; border-left:4px solid #2980b9; background:#f9f9f9; margin-top:20px; color: #000;">
                     <strong>Notes:</strong><br>${typeof marked !== 'undefined' ? marked.parse(notes) : escapeHtml(notes)}
                   </div>` : ''}
-                  <p style="margin-top:30px; font-size:0.85rem; text-align:center; color:#666;">
+                  <p style="margin-top:30px; font-size:0.85rem; text-align:center; color:#000;">
                     Generated on: ${new Date().toLocaleString()}<br>
                     Total items: ${data.reduce((sum, item) => sum + item.count, 0)}
                   </p>

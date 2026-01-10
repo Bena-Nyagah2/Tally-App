@@ -59,7 +59,9 @@
       </div>
       <div id="header-actions">
         <button id="themeToggleBtn" class="btn-secondary" style="padding: 0.5rem 1rem;">
-          <span>🌓</span> Theme
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16" style="vertical-align: text-bottom;">
+            <path d="M8 15A7 7 0 1 0 8 1v14zm0 1A8 8 0 1 1 8 0a8 8 0 0 1 0 16z"/>
+          </svg> Theme
         </button>
         <!-- Tutorial button will be injected here -->
       </div>
@@ -224,6 +226,11 @@
         <!-- Notes Section -->
         <div class="card">
           <label for="exportNotes">Notes</label>
+          <div class="toolbar" style="margin-bottom: 5px; display: flex; gap: 5px;">
+            <button type="button" class="btn-secondary" id="fmtBold" title="Bold" style="padding: 2px 8px; font-weight: bold;">B</button>
+            <button type="button" class="btn-secondary" id="fmtItalic" title="Italic" style="padding: 2px 8px; font-style: italic;">I</button>
+            <button type="button" class="btn-secondary" id="fmtList" title="List" style="padding: 2px 8px;">• List</button>
+          </div>
           <textarea id="exportNotes" placeholder="Add any notes about this inventory..." rows="3" style="resize:vertical;"></textarea>
         </div>
       </section>
