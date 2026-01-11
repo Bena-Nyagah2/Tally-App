@@ -13,7 +13,7 @@
   
   /* Semantic Colors */
   --success: #10b981;
-  --danger: #ef4440;
+  --danger: #ef4444;
   --warning: #f59e0b;
   --info: #3b82f6;
 
@@ -355,56 +355,6 @@ tr:hover td {
   background: rgba(0,0,0,0.01);
 }
 
-/* Mobile Table Cards (Responsive) */
-/*
-@media (max-width: 768px) {
-  table, thead, tbody, th, td, tr {
-    display: block;
-  }
-  
-  thead {
-    display: none; 
-  }
-  
-  tr {
-    background: var(--bg-card);
-    border: 1px solid var(--border);
-    border-radius: var(--radius-md);
-    margin-bottom: 1rem;
-    padding: 1rem;
-    box-shadow: var(--shadow-sm);
-  }
-  
-  td {
-    border: none;
-    padding: 0.5rem 0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    text-align: right;
-  }
-  
-  td:before {
-    content: attr(data-label);
-    float: left;
-    font-weight: 600;
-    color: var(--text-muted);
-    margin-right: 1rem;
-  }
-
-  td:last-child {
-    justify-content: flex-end;
-    margin-top: 0.5rem;
-    padding-top: 1rem;
-    border-top: 1px solid var(--border);
-  }
-  
-  td:last-child:before {
-    display: none;
-  }
-}
-*/
-
 /* Search */
 .search-container {
   position: relative;
@@ -615,6 +565,35 @@ tr:hover td {
   cursor: pointer;
   font-size: 0.9rem;
   text-decoration: underline;
+}
+
+/* Animations for Delete */
+.row-delete-flash {
+  animation: flashRed 0.5s ease-in-out;
+}
+
+@keyframes flashRed {
+  0%, 100% { background-color: transparent; }
+  50% { background-color: rgba(239, 68, 68, 0.2); }
+}
+
+.fade-out {
+  animation: fadeOut 0.5s forwards;
+}
+
+@keyframes fadeOut {
+  to {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+}
+
+/* Confirm Button Style */
+.confirm-btn {
+  color: white !important; /* Force white text */
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+  min-width: 80px;
 }
 
 /* Dark Mode Manual Toggle */
