@@ -171,81 +171,132 @@
     toast("Catalog cleared", "#888");
   }
 
-  function handleCatalogUpload(event) {
-    const file = event.target.files[0];
+  function processFile(file) {
     if (!file) return;
 
-    showLoader("Loading catalog...");
+    // Check file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+      toast("❌ File is too large (max 10MB)", "#e74c3c");
+      return;
+    }
+
+    showLoader("Processing file...");
     
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = function(ev){
       try {
-        let content = e.target.result;
-        let catalog;
-        
-        // First try to parse as pure JSON
+        let json;
         try {
-          catalog = JSON.parse(content);
-        } catch (jsonError) {
-          console.log("Trying to parse as JavaScript format...");
-          // If that fails, try to extract from JavaScript format
-          catalog = parseJavaScriptJSON(content);
+          json = JSON.parse(ev.target.result);
+        } catch (e) {
+          // If standard JSON parse fails, try the JS format
+          try {
+            json = parseJavaScriptJSON(ev.target.result);
+          } catch (jsError) {
+            throw new Error("Invalid format. Please check your file.");
+          }
         }
         
-        // Validate catalog structure
-        const validation = validateCatalog(catalog);
-        if (!validation.valid) {
-          throw new Error(validation.error);
-        }
-        
-        // Count entries
-        const brandCount = validation.brands;
-        let colorCount = 0;
-        Object.values(catalog).forEach(colors => {
-          colorCount += colors.length;
-        });
-        
-        // Save catalog
-        if (saveCatalog(catalog)) {
-          hideLoader();
-          
-          openModal({
-            message: `🎉 Catalog Updated Successfully!`,
-            subtext: `Loaded ${brandCount} brands with ${colorCount} total color options.`,
-            buttons: [
-              { 
-                label: "OK", 
-                color: "var(--ok)", 
-                onClick: () => {
-                  updateDatalists();
-                  updateColorDatalist(document.getElementById("brand").value.trim());
-                  toast("✅ Catalog loaded successfully!", "#27ae60");
+        // Check if it's a Catalog (Object) or Inventory (Array)
+        if (!Array.isArray(json)) {
+          // It might be a catalog object
+          const validation = validateCatalog(json);
+          if (validation.valid) {
+            hideLoader();
+
+            // Count entries for info
+            const brandCount = validation.brands;
+            let colorCount = 0;
+            Object.values(json).forEach(colors => {
+              if(Array.isArray(colors)) colorCount += colors.length;
+            });
+
+            openModal({
+              message: "Catalog Detected",
+              subtext: `Found ${brandCount} brands with ${colorCount} colors. Update catalog?`,
+              buttons: [
+                {
+                  label: "Yes, Update Catalog",
+                  color: "var(--success)",
+                  onClick: () => {
+                    if (saveCatalog(json)) {
+                      updateDatalists();
+                      updateColorDatalist(document.getElementById("brand").value.trim());
+                      toast("✅ Catalog updated successfully!", "#27ae60");
+                    } else {
+                      toast("❌ Error saving catalog", "#e74c3c");
+                    }
+                  }
+                },
+                {
+                  label: "Cancel",
+                  color: "#888",
+                  onClick: () => {}
                 }
-              },
-              { 
-                label: "Clear Catalog", 
-                color: "var(--danger)", 
-                onClick: () => clearCatalog()
-              }
-            ]
-          });
-        } else {
-          hideLoader();
-          toast("❌ Error saving catalog to browser storage", "#e74c3c");
+              ]
+            });
+            return;
+          } else {
+            // Not a valid catalog and not an array
+            throw new Error("Invalid format: File should be an array of shoes or a valid catalog object.");
+          }
         }
-      } catch (error) {
+        
+        if (json.length === 0) {
+          hideLoader();
+          toast("⚠️ File is empty - nothing to import", "#f39c12");
+          return;
+        }
+
         hideLoader();
-        console.error("Catalog parse error:", error);
-        toast(`❌ ${error.message || "Invalid catalog file format"}`, "#e74c3c");
+
+        openModal({
+          message: `Import ${json.length} items?`,
+          subtext: "Would you like to merge with existing data or replace it?",
+          buttons:[
+            {
+              label:"Merge",
+              color:"#27ae60",
+              onClick: ()=> {
+                if (mergeData(json)) {
+                  toast("✅ Data merged successfully", "#27ae60");
+                }
+              }
+            },
+            {
+              label:"Replace",
+              color:"#e74c3c",
+              onClick: ()=> {
+                if (saveData(json)) {
+                  render();
+                  toast("✅ Data replaced successfully", "#27ae60");
+                }
+              }
+            },
+            {
+              label:"Cancel",
+              color:"#888",
+              onClick: ()=>{}
+            }
+          ]
+        });
+      } catch(err) {
+        hideLoader();
+        console.error("Import error", err);
+        toast(`❌ ${err.message || "Invalid file"}`, "#e74c3c");
       }
     };
-    
     reader.onerror = function() {
       hideLoader();
       toast("❌ Error reading file", "#e74c3c");
     };
-    
     reader.readAsText(file);
+  }
+
+  function handleCatalogUpload(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    processFile(file);
     event.target.value = "";
   }
 
@@ -1556,124 +1607,7 @@ function addTutorialButton() {
         jsonFileInput.addEventListener("change", function(e){
           const file = e.target.files[0];
           if(!file) return;
-          
-          // Check file size (max 10MB)
-          if (file.size > 10 * 1024 * 1024) {
-            toast("❌ File is too large (max 10MB)", "#e74c3c");
-            e.target.value = "";
-            return;
-          }
-          
-          // Check file type
-          if (!file.name.endsWith('.json')) {
-            toast("❌ Please select a JSON file", "#e74c3c");
-            e.target.value = "";
-            return;
-          }
-          
-          showLoader("Importing data...");
-          
-          const reader = new FileReader();
-          reader.onload = function(ev){
-            try {
-              let json;
-              try {
-                json = JSON.parse(ev.target.result);
-              } catch (e) {
-                // If standard JSON parse fails, try the JS format
-                try {
-                  json = parseJavaScriptJSON(ev.target.result);
-                } catch (jsError) {
-                  throw new Error("Invalid format. Please check your file.");
-                }
-              }
-              
-              // Check if it's a Catalog (Object) or Inventory (Array)
-              if (!Array.isArray(json)) {
-                // It might be a catalog object
-                const validation = validateCatalog(json);
-                if (validation.valid) {
-                  hideLoader();
-                  openModal({
-                    message: "Catalog Detected",
-                    subtext: "This file looks like a master catalog. Do you want to update your brand/color options?",
-                    buttons: [
-                      {
-                        label: "Yes, Update Catalog",
-                        color: "var(--ok)",
-                        onClick: () => {
-                          if (saveCatalog(json)) {
-                            updateDatalists();
-                            updateColorDatalist(document.getElementById("brand").value.trim());
-                            toast("✅ Catalog updated successfully!", "#27ae60");
-                          } else {
-                            toast("❌ Error saving catalog", "#e74c3c");
-                          }
-                        }
-                      },
-                      {
-                        label: "No, Cancel",
-                        color: "#888",
-                        onClick: () => {}
-                      }
-                    ]
-                  });
-                  return;
-                } else {
-                  // Not a valid catalog and not an array
-                  throw new Error("Invalid format: File should be an array of shoes or a valid catalog object.");
-                }
-              }
-              
-              if (json.length === 0) {
-                hideLoader();
-                toast("⚠️ File is empty - nothing to import", "#f39c12");
-                return;
-              }
-              
-              hideLoader();
-              
-              openModal({
-                message: `Import ${json.length} items?`,
-                subtext: "Would you like to merge with existing data or replace it?",
-                buttons:[
-                  { 
-                    label:"Merge", 
-                    color:"#27ae60", 
-                    onClick: ()=> { 
-                      if (mergeData(json)) {
-                        toast("✅ Data merged successfully", "#27ae60"); 
-                      }
-                    }
-                  },
-                  { 
-                    label:"Replace", 
-                    color:"#e74c3c", 
-                    onClick: ()=> { 
-                      if (saveData(json)) {
-                        render(); 
-                        toast("✅ Data replaced successfully", "#27ae60"); 
-                      }
-                    }
-                  },
-                  { 
-                    label:"Cancel", 
-                    color:"#888", 
-                    onClick: ()=>{} 
-                  }
-                ]
-              });
-            }catch(err){
-              hideLoader();
-              console.error("Import error", err);
-              toast(`❌ ${err.message || "Invalid JSON file"}`, "#e74c3c");
-            }
-          };
-          reader.onerror = function() {
-            hideLoader();
-            toast("❌ Error reading file", "#e74c3c");
-          };
-          reader.readAsText(file);
+          processFile(file);
           e.target.value = "";
         });
       }
