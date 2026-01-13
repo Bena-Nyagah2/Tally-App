@@ -197,89 +197,118 @@
           }
         }
         
-        // Check if it's a Catalog (Object) or Inventory (Array)
-        if (!Array.isArray(json)) {
-          // It might be a catalog object
-          const validation = validateCatalog(json);
-          if (validation.valid) {
-            hideLoader();
+        // Determine type: Inventory Array, Inventory Object (with notes), or Catalog
+        let importItems = null;
+        let importNotes = undefined;
 
-            // Count entries for info
-            const brandCount = validation.brands;
-            let colorCount = 0;
-            Object.values(json).forEach(colors => {
-              if(Array.isArray(colors)) colorCount += colors.length;
-            });
-
-            openModal({
-              message: "Catalog Detected",
-              subtext: `Found ${brandCount} brands with ${colorCount} colors. Update catalog?`,
-              buttons: [
-                {
-                  label: "Yes, Update Catalog",
-                  color: "var(--success)",
-                  onClick: () => {
-                    if (saveCatalog(json)) {
-                      updateDatalists();
-                      updateColorDatalist(document.getElementById("brand").value.trim());
-                      toast("✅ Catalog updated successfully!", "#27ae60");
-                    } else {
-                      toast("❌ Error saving catalog", "#e74c3c");
-                    }
-                  }
-                },
-                {
-                  label: "Cancel",
-                  color: "#888",
-                  onClick: () => {}
-                }
-              ]
-            });
-            return;
-          } else {
-            // Not a valid catalog and not an array
-            throw new Error("Invalid format: File should be an array of shoes or a valid catalog object.");
-          }
+        if (Array.isArray(json)) {
+          importItems = json;
+        } else if (json && typeof json === 'object' && Array.isArray(json.data)) {
+          importItems = json.data;
+          importNotes = json.notes;
         }
-        
-        if (json.length === 0) {
+
+        // If it's inventory (Array or Object with data array)
+        if (importItems) {
+          if (importItems.length === 0) {
+            hideLoader();
+            toast("⚠️ File is empty - nothing to import", "#f39c12");
+            return;
+          }
+
           hideLoader();
-          toast("⚠️ File is empty - nothing to import", "#f39c12");
+
+          openModal({
+            message: `Import ${importItems.length} items?`,
+            subtext: "Would you like to merge with existing data or replace it?",
+            buttons:[
+              {
+                label:"Merge",
+                color:"#27ae60",
+                onClick: ()=> {
+                  // Append notes if present
+                  if (importNotes) {
+                    const currentNotes = document.getElementById("exportNotes").value;
+                    if (currentNotes.trim()) {
+                      document.getElementById("exportNotes").value += "\n\n--- Imported Notes ---\n" + importNotes;
+                    } else {
+                      document.getElementById("exportNotes").value = importNotes;
+                    }
+                    saveNotes();
+                  }
+
+                  if (mergeData(importItems)) {
+                    toast("✅ Data merged successfully", "#27ae60");
+                  }
+                }
+              },
+              {
+                label:"Replace",
+                color:"#e74c3c",
+                onClick: ()=> {
+                  // Replace notes if present in import
+                  if (importNotes !== undefined) {
+                    document.getElementById("exportNotes").value = importNotes || "";
+                    saveNotes();
+                  }
+
+                  if (saveData(importItems)) {
+                    render();
+                    toast("✅ Data replaced successfully", "#27ae60");
+                  }
+                }
+              },
+              {
+                label:"Cancel",
+                color:"#888",
+                onClick: ()=>{}
+              }
+            ]
+          });
           return;
         }
 
-        hideLoader();
+        // If not inventory, check if it's a Catalog
+        const validation = validateCatalog(json);
+        if (validation.valid) {
+          hideLoader();
 
-        openModal({
-          message: `Import ${json.length} items?`,
-          subtext: "Would you like to merge with existing data or replace it?",
-          buttons:[
-            {
-              label:"Merge",
-              color:"#27ae60",
-              onClick: ()=> {
-                if (mergeData(json)) {
-                  toast("✅ Data merged successfully", "#27ae60");
+          // Count entries for info
+          const brandCount = validation.brands;
+          let colorCount = 0;
+          Object.values(json).forEach(colors => {
+            if(Array.isArray(colors)) colorCount += colors.length;
+          });
+
+          openModal({
+            message: "Catalog Detected",
+            subtext: `Found ${brandCount} brands with ${colorCount} colors. Update catalog?`,
+            buttons: [
+              {
+                label: "Yes, Update Catalog",
+                color: "var(--success)",
+                onClick: () => {
+                  if (saveCatalog(json)) {
+                    updateDatalists();
+                    updateColorDatalist(document.getElementById("brand").value.trim());
+                    toast("✅ Catalog updated successfully!", "#27ae60");
+                  } else {
+                    toast("❌ Error saving catalog", "#e74c3c");
+                  }
                 }
+              },
+              {
+                label: "Cancel",
+                color: "#888",
+                onClick: () => {}
               }
-            },
-            {
-              label:"Replace",
-              color:"#e74c3c",
-              onClick: ()=> {
-                if (saveData(json)) {
-                  render();
-                  toast("✅ Data replaced successfully", "#27ae60");
-                }
-              }
-            },
-            {
-              label:"Cancel",
-              color:"#888",
-              onClick: ()=>{}
-            }
-          ]
-        });
+            ]
+          });
+          return;
+        }
+
+        // If neither
+        throw new Error("Invalid format: File should be an array of shoes, a valid export object, or a valid catalog object.");
       } catch(err) {
         hideLoader();
         console.error("Import error", err);
