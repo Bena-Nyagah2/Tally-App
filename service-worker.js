@@ -1,53 +1,52 @@
-/* v11.0 — bump this to force update */
-const CACHE_NAME = "shoe-tracker-cache-v11.0";
-const CACHE_VERSION = "v11.0";
+/* ==========================================
+   UMOJA Tracker - Service Worker v12.1
+   Provides full offline functionality & caching
+========================================== */
+const CACHE_NAME = "umoja-tracker-cache-v12.1";
+const CACHE_VERSION = "v12.1";
 
-// Core assets that should be cached immediately on install
+// Core assets that must be cached immediately on install
 const CORE_ASSETS = [
   "./",
   "./index.html",
+  "./Umoja_Audit_Pro.html",
   "./app.js",
+  "./style.css",
   "./manifest.json",
   "./icons/icon-192.png",
   "./icons/icon-512.png"
 ];
 
-// External CDN assets (will be cached when first loaded)
+// External CDN assets (cached when first requested)
 const EXTERNAL_ASSETS = [
   "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js",
-  "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js"
+  "https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.9.3/html2pdf.bundle.min.js",
+  "https://cdn.jsdelivr.net/npm/marked/marked.min.js"
 ];
 
-// Install event - cache core assets immediately
+// 1. INSTALL EVENT - Pre-cache core assets
 self.addEventListener("install", (e) => {
-  console.log('[Service Worker] Installing...');
-  self.skipWaiting(); // Activate immediately
+  console.log(`[Service Worker] Installing ${CACHE_VERSION}...`);
+  self.skipWaiting(); // Force the waiting service worker to become the active service worker
   
   e.waitUntil(
-    caches.open(CACHE_NAME)
-      .then(cache => {
-        console.log('[Service Worker] Caching core assets...');
-        return cache.addAll(CORE_ASSETS).catch(err => {
-          console.error('[Service Worker] Failed to cache some assets:', err);
-          // Don't fail the install if some assets can't be cached
-        });
-      })
-      .then(() => {
-        console.log('[Service Worker] Installation complete');
-        return self.skipWaiting();
-      })
+    caches.open(CACHE_NAME).then(cache => {
+      console.log('[Service Worker] Pre-caching core assets...');
+      return cache.addAll(CORE_ASSETS).catch(err => {
+        console.error('[Service Worker] Failed to cache some core assets:', err);
+      });
+    })
   );
 });
 
-// Activate event - clean up old caches
+// 2. ACTIVATE EVENT - Clean up old caches
 self.addEventListener("activate", (e) => {
-  console.log('[Service Worker] Activating...');
+  console.log(`[Service Worker] Activating ${CACHE_VERSION}...`);
   
   e.waitUntil(
     caches.keys().then(cacheNames => {
       return Promise.all(
         cacheNames.map(cacheName => {
-          // Delete old caches that don't match current name
           if (cacheName !== CACHE_NAME) {
             console.log('[Service Worker] Deleting old cache:', cacheName);
             return caches.delete(cacheName);
@@ -55,137 +54,72 @@ self.addEventListener("activate", (e) => {
         })
       );
     }).then(() => {
-      console.log('[Service Worker] Activation complete');
-      return self.clients.claim(); // Take control of all clients
+      console.log('[Service Worker] Activation complete. Claiming clients.');
+      return self.clients.claim(); // Take control of all open pages immediately
     })
   );
 });
 
-// Fetch event - handle all network requests
+// 3. FETCH EVENT - Network interception for offline mode
 self.addEventListener("fetch", (e) => {
   const url = new URL(e.request.url);
   
-  // Skip non-GET requests
-  if (e.request.method !== 'GET') return;
+  // Skip non-GET requests and browser extensions
+  if (e.request.method !== 'GET' || url.protocol === 'chrome-extension:') return;
   
-  // Skip browser extension requests
-  if (url.protocol === 'chrome-extension:') return;
-  
-  // Handle external CDN requests
+  // STRATEGY A: External CDN Assets (Cache First, then Network)
   if (EXTERNAL_ASSETS.includes(e.request.url)) {
     e.respondWith(
-      caches.match(e.request)
-        .then(cached => {
-          // Return cached version if available
-          if (cached) {
-            console.log('[Service Worker] Serving from cache (external):', e.request.url);
-            return cached;
-          }
-          
-          // Otherwise fetch from network and cache
-          return fetch(e.request)
-            .then(response => {
-              // Check if we received a valid response
-              if (!response || response.status !== 200 || response.type !== 'basic') {
-                return response;
-              }
-              
-              // Clone the response to cache and return
-              const responseToCache = response.clone();
-              caches.open(CACHE_NAME)
-                .then(cache => {
-                  cache.put(e.request, responseToCache);
-                  console.log('[Service Worker] Cached external resource:', e.request.url);
-                });
-              
-              return response;
-            })
-            .catch(error => {
-              console.error('[Service Worker] Fetch failed:', error);
-              // Even if network fails, we don't have a cached version
-              return new Response('Network error', {
-                status: 408,
-                headers: { 'Content-Type': 'text/plain' }
-              });
-            });
-        })
+      caches.match(e.request).then(cached => {
+        if (cached) return cached;
+        
+        return fetch(e.request).then(response => {
+          if (!response || response.status !== 200 || response.type !== 'basic') return response;
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(e.request, responseToCache));
+          return response;
+        }).catch(err => console.error('[Service Worker] CDN Fetch failed:', err));
+      })
     );
     return;
   }
   
-  // Handle local/same-origin requests with Cache-First strategy
+  // STRATEGY B: Local/Same-Origin Requests (Cache First, fallback to Network, fallback to Offline Page)
   if (url.origin === self.location.origin) {
     e.respondWith(
-      caches.match(e.request)
-        .then(cached => {
-          // Return cached version if available
-          if (cached) {
-            console.log('[Service Worker] Serving from cache (local):', e.request.url);
-            return cached;
+      caches.match(e.request).then(cached => {
+        if (cached) return cached;
+        
+        return fetch(e.request).then(response => {
+          if (!response || response.status !== 200 || response.type !== 'basic') return response;
+          const responseToCache = response.clone();
+          caches.open(CACHE_NAME).then(cache => cache.put(e.request, responseToCache));
+          return response;
+        }).catch(error => {
+          console.error('[Service Worker] Local fetch failed, device is offline:', error);
+          // If it's a page navigation request and we are offline, return index.html
+          if (e.request.mode === 'navigate') {
+            return caches.match('./index.html');
           }
-          
-          // Otherwise fetch from network
-          return fetch(e.request)
-            .then(response => {
-              // Check if we received a valid response
-              if (!response || response.status !== 200 || response.type !== 'basic') {
-                return response;
-              }
-              
-              // Clone the response to cache and return
-              const responseToCache = response.clone();
-              caches.open(CACHE_NAME)
-                .then(cache => {
-                  cache.put(e.request, responseToCache);
-                });
-              
-              return response;
-            })
-            .catch(error => {
-              console.error('[Service Worker] Fetch failed, serving offline page:', error);
-              
-              // For navigation requests, return the offline page (index.html)
-              if (e.request.mode === 'navigate') {
-                return caches.match('./index.html');
-              }
-              
-              // For API/data requests, return empty response
-              return new Response('Offline', {
-                status: 503,
-                headers: { 'Content-Type': 'text/plain' }
-              });
-            });
-        })
+          return new Response('Offline', { status: 503, headers: { 'Content-Type': 'text/plain' } });
+        });
+      })
     );
     return;
   }
   
-  // For other cross-origin requests, use Network-First strategy
+  // STRATEGY C: All other requests (Network First, fallback to Cache)
   e.respondWith(
-    fetch(e.request)
-      .then(response => {
-        // Don't cache non-successful responses
-        if (!response || response.status !== 200) {
-          return response;
-        }
-        
-        // Clone to cache
-        const responseToCache = response.clone();
-        caches.open(CACHE_NAME)
-          .then(cache => {
-            cache.put(e.request, responseToCache);
-          });
-        
-        return response;
-      })
-      .catch(() => {
-        // If network fails, try cache
-        return caches.match(e.request);
-      })
+    fetch(e.request).then(response => {
+      if (!response || response.status !== 200) return response;
+      const responseToCache = response.clone();
+      caches.open(CACHE_NAME).then(cache => cache.put(e.request, responseToCache));
+      return response;
+    }).catch(() => caches.match(e.request))
   );
 });
 
-// Handle service worker updates
+// 4. MESSAGE EVENT - Listen for manual update triggers
 self.addEventListener('message', (event) => {
   if (event.data && event.data.type === 'SKIP_WAITING') {
     self.skipWaiting();
