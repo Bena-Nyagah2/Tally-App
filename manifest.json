@@ -1,6 +1,6 @@
 {
-  "name": "TRM Shoe Tracker",
-  "short_name": "Shoe Tracker",
+  "name": "BENA UMOJA Shoe Tracker",
+  "short_name": "UMOJA Shoe Tracker",
   "description": "Track your shoe inventory with ease - Works Offline",
   "start_url": "./",
   "display": "standalone",
