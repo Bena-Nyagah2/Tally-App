@@ -156,13 +156,17 @@
         </div>
     </div>
 
-    <script>
+   <script>
         // Data Stores
         let systemDataMap = new Map(); 
         let physicalDataMap = new Map(); 
         let auditReportArray = []; 
         let csvFileLoaded = false;
         let jsonFileLoaded = false;
+        
+        // --- NEW: FILE MEMORY TO PREVENT DOUBLE-COUNTING ---
+        let processedSystemFiles = new Set();
+        let processedTallyFiles = new Set();
 
         function escapeHTML(str) {
             return String(str).replace(/[&<>"']/g, function(m) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[m]; });
@@ -187,13 +191,16 @@
         setupDropZone('dropZoneTally', 'jsonFile');
 
         async function handleFiles(files, zoneId) {
+            // FIX: Removed the .clear() functions here so sequential dropping doesn't erase old data!
             if (zoneId === 'dropZoneSystem') {
                 await processSystemCSV(files);
                 document.getElementById('statusSystem').style.display = 'inline-block';
+                document.getElementById('statusSystem').innerText = `✅ ${processedSystemFiles.size} System Files`;
                 csvFileLoaded = true;
             } else if (zoneId === 'dropZoneTally') {
                 await processTallyJSON(files);
                 document.getElementById('statusTally').style.display = 'inline-block';
+                document.getElementById('statusTally').innerText = `✅ ${processedTallyFiles.size} Tally Files`;
                 jsonFileLoaded = true;
             }
             
@@ -203,35 +210,62 @@
         }
 
         async function processSystemCSV(files) {
-            systemDataMap.clear();
             for (let i = 0; i < files.length; i++) {
-                const text = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsText(files[i]); });
-                const rows = parseCSV(text);
+                const file = files[i];
                 
-                rows.forEach(r => {
-                    if (r.length >= 21 && r[13] && r[13].includes("Style Code")) {
-                        let desc = r[16].trim(); 
-                        let size = r[17].trim(); 
-                        let color = r[18].trim();
-                        let soh = parseInt(r[20]) || 0;
-                        
-                        if (soh >= 0) {
-                            let key = makeKey(desc, color, size);
-                            if (!systemDataMap.has(key)) {
-                                systemDataMap.set(key, { desc, color, size, sysSOH: 0 });
+                // FIX: Duplicate Protection! Ignore if already processed.
+                if (processedSystemFiles.has(file.name)) continue;
+                processedSystemFiles.add(file.name);
+
+                try {
+                    // FIX: Added onerror to prevent silent app freezes on corrupted files
+                    const text = await new Promise((res, rej) => { 
+                        const r = new FileReader(); 
+                        r.onload = e => res(e.target.result); 
+                        r.onerror = e => rej(new Error("File read failed"));
+                        r.readAsText(file); 
+                    });
+                    
+                    const rows = parseCSV(text);
+                    rows.forEach(r => {
+                        if (r.length >= 21 && r[13] && r[13].includes("Style Code")) {
+                            let desc = r[16].trim(); 
+                            let size = r[17].trim(); 
+                            let color = r[18].trim();
+                            let soh = parseInt(r[20]) || 0;
+                            
+                            if (soh >= 0) {
+                                let key = makeKey(desc, color, size);
+                                if (!systemDataMap.has(key)) {
+                                    systemDataMap.set(key, { desc, color, size, sysSOH: 0 });
+                                }
+                                systemDataMap.get(key).sysSOH += soh;
                             }
-                            systemDataMap.get(key).sysSOH += soh;
                         }
-                    }
-                });
+                    });
+                } catch (e) {
+                    alert(`Error processing ${file.name}. Skipped.`);
+                }
             }
         }
 
         async function processTallyJSON(files) {
-            physicalDataMap.clear();
             for (let i = 0; i < files.length; i++) {
-                const text = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsText(files[i]); });
+                const file = files[i];
+
+                // FIX: Duplicate Protection! Ignore if already processed.
+                if (processedTallyFiles.has(file.name)) continue;
+                processedTallyFiles.add(file.name);
+
                 try {
+                    // FIX: Added onerror to prevent silent app freezes
+                    const text = await new Promise((res, rej) => { 
+                        const r = new FileReader(); 
+                        r.onload = e => res(e.target.result); 
+                        r.onerror = e => rej(new Error("File read failed"));
+                        r.readAsText(file); 
+                    });
+                    
                     let data = JSON.parse(text);
                     if (data.data && Array.isArray(data.data)) data = data.data; 
                     
@@ -248,7 +282,8 @@
                         physicalDataMap.set(key, physicalDataMap.get(key) + count);
                     });
                 } catch(e) {
-                    alert(`Invalid Tally JSON file skipped: ${files[i].name}`);
+                    alert(`Invalid Tally JSON file skipped: ${file.name}`);
+                    processedTallyFiles.delete(file.name); // Remove from memory if it failed
                 }
             }
         }
