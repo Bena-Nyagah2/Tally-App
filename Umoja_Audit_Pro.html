@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>UMOJA Stock Pro: Audit Edition</title>
+    <style>
+        /* Umoja Official Brand Theme (Light) */
+        body { font-family: system-ui, -apple-system, sans-serif; margin: 0; padding: 40px 20px; min-height: 100vh; display: flex; align-items: flex-start; justify-content: center; background: #f0f4f8; color: #1f2937; }
+        .container { background: #ffffff; padding: 40px; border-radius: 16px; border: 1px solid #e2e8f0; box-shadow: 0 10px 40px rgba(0, 27, 113, 0.08); width: 100%; max-width: 900px; }
+        
+        h2 { margin-top: 0; font-size: 2.4rem; font-weight: 900; color: #001b71; text-align: center; margin-bottom: 5px; letter-spacing: -0.5px; }
+        .brand-dot { color: #e60000; }
+        p.subtitle { color: #64748b; text-align: center; margin-bottom: 30px; font-size: 0.95rem; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; }
+
+        /* Dual Drop Zones */
+        .drop-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-bottom: 25px; }
+        
+        .drop-zone { border: 2px dashed rgba(0, 27, 113, 0.3); border-radius: 12px; padding: 40px 20px; text-align: center; background: rgba(0, 27, 113, 0.02); cursor: pointer; transition: all 0.3s ease; position: relative; }
+        .drop-zone.dragover { border-color: #001b71; background: rgba(0, 27, 113, 0.06); transform: scale(1.02); }
+        .drop-zone:hover { border-color: #001b71; background: rgba(0, 27, 113, 0.04); }
+        .drop-zone input[type="file"] { display: none; }
+        
+        .drop-zone-audit { border-color: rgba(139, 92, 246, 0.4); background: rgba(139, 92, 246, 0.02); }
+        .drop-zone-audit.dragover { border-color: #8b5cf6; background: rgba(139, 92, 246, 0.06); }
+        .drop-zone-audit:hover { border-color: #8b5cf6; background: rgba(139, 92, 246, 0.04); }
+
+        .file-status { display: none; margin-top: 10px; font-size: 0.85rem; font-weight: 700; color: #059669; background: #d1fae5; padding: 4px 8px; border-radius: 6px; }
+
+        .progress-bar-container { width: 100%; background: #e2e8f0; border-radius: 10px; height: 8px; margin-bottom: 20px; overflow: hidden; display: none; }
+        .progress-bar { height: 100%; background: #001b71; width: 0%; transition: width 0.2s; }
+        
+        /* Stats */
+        .dashboard { display: none; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        .stat-card { background: #f8fafc; padding: 15px; border-radius: 12px; text-align: center; border: 1px solid #e2e8f0; }
+        .stat-value { font-size: 1.4rem; font-weight: 800; color: #001b71; margin-bottom: 5px; }
+        .stat-label { font-size: 0.7rem; color: #64748b; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 700; }
+        .stat-audit { border-color: #c4b5fd; background: #f5f3ff; }
+        .stat-audit .stat-value { color: #6d28d9; }
+
+        /* Variance Alerts */
+        .alerts-container { display: none; background: #fff1f2; border: 1px solid #fecaca; border-radius: 12px; padding: 20px; margin-bottom: 25px; }
+        .alerts-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px; border-bottom: 1px solid #fecaca; padding-bottom: 15px; }
+        .alerts-header h3 { margin: 0 0 5px 0; color: #dc2626; font-size: 1.1rem; font-weight: 800; }
+        .alerts-scroll { max-height: 200px; overflow-y: auto; padding-right: 10px; }
+        .alerts-list { margin: 0; padding: 0; list-style: none; font-size: 0.85rem; color: #991b1b; }
+        .alerts-list li { margin-bottom: 6px; padding-bottom: 6px; border-bottom: 1px dashed #fecaca; display: flex; justify-content: space-between; align-items: center; }
+        
+        .tag-missing { background: #dc2626; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
+        .tag-extra { background: #3b82f6; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
+        .tag-perfect { background: #10b981; color: white; padding: 3px 8px; border-radius: 4px; font-size: 0.7rem; font-weight: bold; }
+
+        .btn-audit-export { background: #6d28d9; color: white; border: none; padding: 8px 16px; border-radius: 8px; cursor: pointer; font-weight: bold; font-size: 0.85rem; transition: background 0.2s; }
+        .btn-audit-export:hover { background: #5b21b6; }
+
+        /* Preview Table */
+        .preview-container { display: none; margin-bottom: 25px; background: #f8fafc; border-radius: 12px; padding: 15px; border: 1px solid #e2e8f0; }
+        .preview-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .preview-title { font-size: 0.9rem; color: #334155; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+        .search-box { background: #ffffff; border: 1px solid #cbd5e1; color: #0f172a; padding: 8px 12px; border-radius: 8px; width: 250px; font-size: 0.85rem; }
+        
+        .table-scroll { overflow-x: auto; max-height: 400px; overflow-y: auto; border-radius: 8px; border: 1px solid #e2e8f0; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.8rem; text-align: left; background: white; }
+        th { background: #001b71; padding: 12px 10px; color: #ffffff; font-weight: 600; position: sticky; top: 0; z-index: 10; }
+        th.th-audit { background: #6d28d9; border-left: 2px solid rgba(255,255,255,0.2); }
+        td { padding: 10px; border-top: 1px solid #e2e8f0; color: #334155; }
+        tr:hover td { background: #f1f5f9; }
+        
+        td.td-variance-bad { color: #dc2626; font-weight: bold; background: #fef2f2; }
+        td.td-variance-good { color: #10b981; font-weight: bold; background: #f0fdf4; }
+        td.td-variance-extra { color: #3b82f6; font-weight: bold; background: #eff6ff; }
+
+        /* Buttons */
+        .btn-group { display: flex; flex-direction: column; gap: 10px; display: none; }
+        .btn-row { display: flex; gap: 15px; }
+        button.action-btn { flex: 1; border: none; padding: 16px 20px; border-radius: 8px; cursor: pointer; font-weight: 700; font-size: 0.95rem; transition: all 0.2s ease; text-transform: uppercase; }
+        .btn-primary { background: #001b71; color: #fff; }
+        .btn-primary:hover { background: #00124d; transform: translateY(-1px); }
+        .btn-secondary { background: transparent; color: #64748b; width: 100%; margin-top: 5px; padding: 12px; border-radius: 8px; border: 1px dashed #cbd5e1; cursor: pointer; font-weight: 600; }
+        .btn-secondary:hover { background: #f1f5f9; color: #0f172a; border-color: #94a3b8; }
+        
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    </style>
+</head>
+<body>
+
+    <div class="container">
+        <h2>UMO<span class="brand-dot">J</span>A <span style="font-weight: 300;">Audit Pro</span></h2>
+        <p class="subtitle">System Reconciliation & Variance Engine</p>
+        
+        <div class="drop-grid" id="dropGrid">
+            <div class="drop-zone" id="dropZoneSystem" onclick="document.getElementById('csvFiles').click()">
+                <span style="font-size: 2rem; display:block; margin-bottom:5px;">💻</span>
+                <strong style="font-size: 1rem; color: #001b71;">Step 1: System Data</strong>
+                <p style="color: #64748b; margin-top: 5px; font-size: 0.8rem;">Drop raw .CSV exports here</p>
+                <div id="statusSystem" class="file-status">✅ Loaded</div>
+                <input type="file" id="csvFiles" accept=".csv" multiple>
+            </div>
+
+            <div class="drop-zone drop-zone-audit" id="dropZoneTally" onclick="document.getElementById('jsonFile').click()">
+                <span style="font-size: 2rem; display:block; margin-bottom:5px;">📱</span>
+                <strong style="font-size: 1rem; color: #6d28d9;">Step 2: Physical Tally</strong>
+                <p style="color: #64748b; margin-top: 5px; font-size: 0.8rem;">Drop Tally App .JSON here</p>
+                <div id="statusTally" class="file-status">✅ Loaded</div>
+                <input type="file" id="jsonFile" accept=".json" multiple>
+            </div>
+        </div>
+
+        <button id="btnRunAudit" class="action-btn" style="width:100%; background: #6d28d9; color: white; display: none; margin-bottom: 25px;" onclick="runAuditReconciliation()">
+            🔍 Run Stock Reconciliation Audit
+        </button>
+
+        <div class="progress-bar-container" id="progressContainer"><div class="progress-bar" id="progressBar"></div></div>
+
+        <div class="dashboard" id="dashboard">
+            <div class="stat-card"><div class="stat-value" id="statSysRows">0</div><div class="stat-label">System Styles</div></div>
+            <div class="stat-card"><div class="stat-value" id="statSysSOH">0</div><div class="stat-label">System Count</div></div>
+            <div class="stat-card stat-audit"><div class="stat-value" id="statPhySOH">0</div><div class="stat-label">Physical Count</div></div>
+            <div class="stat-card stat-audit"><div class="stat-value" id="statVariance">0</div><div class="stat-label">Net Variance</div></div>
+        </div>
+
+        <div class="alerts-container" id="alertsContainer">
+            <div class="alerts-header">
+                <div>
+                    <h3 id="alertsTitle">🚨 Audit Discrepancies</h3>
+                    <div style="font-size: 0.8rem; color: #7f1d1d;">Items missing from physical count or unlogged extras.</div>
+                </div>
+                <button class="btn-audit-export" onclick="downloadAuditReport()">📥 Export Variance Report</button>
+            </div>
+            <div class="alerts-scroll">
+                <ul class="alerts-list" id="alertsList"></ul>
+            </div>
+        </div>
+
+        <div class="preview-container" id="previewContainer">
+            <div class="preview-header">
+                <div class="preview-title">👀 Reconciliation Ledger</div>
+                <input type="text" id="searchInput" class="search-box" placeholder="🔍 Search description or size..." onkeyup="filterTable()">
+            </div>
+            <div class="table-scroll">
+                <table id="previewTable">
+                    <thead>
+                        <tr>
+                            <th>Style / Desc</th><th>Size</th><th>Col</th>
+                            <th class="th-audit">Sys. SOH</th><th class="th-audit">Phy. Count</th><th class="th-audit">Variance</th>
+                        </tr>
+                    </thead>
+                    <tbody id="previewBody"></tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="btn-group" id="actionButtons">
+            <button class="btn-secondary" onclick="location.reload()">↺ Start New Audit</button>
+        </div>
+    </div>
+
+    <script>
+        // Data Stores
+        let systemDataMap = new Map(); 
+        let physicalDataMap = new Map(); 
+        let auditReportArray = []; 
+        let csvFileLoaded = false;
+        let jsonFileLoaded = false;
+
+        function escapeHTML(str) {
+            return String(str).replace(/[&<>"']/g, function(m) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[m]; });
+        }
+        
+        function makeKey(desc, color, size) {
+            return `${String(desc).trim().toLowerCase()}|${String(color).trim().toLowerCase()}|${String(size).trim().toLowerCase()}`;
+        }
+
+        function setupDropZone(zoneId, inputId) {
+            const zone = document.getElementById(zoneId);
+            const input = document.getElementById(inputId);
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => { zone.addEventListener(e, preventDefaults); });
+            function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+            ['dragenter', 'dragover'].forEach(e => zone.addEventListener(e, () => zone.classList.add('dragover')));
+            ['dragleave', 'drop'].forEach(e => zone.addEventListener(e, () => zone.classList.remove('dragover')));
+            zone.addEventListener('drop', (e) => { if(e.dataTransfer.files.length) handleFiles(e.dataTransfer.files, zoneId); });
+            input.addEventListener('change', function() { if(this.files.length) handleFiles(this.files, zoneId); });
+        }
+
+        setupDropZone('dropZoneSystem', 'csvFiles');
+        setupDropZone('dropZoneTally', 'jsonFile');
+
+        async function handleFiles(files, zoneId) {
+            if (zoneId === 'dropZoneSystem') {
+                await processSystemCSV(files);
+                document.getElementById('statusSystem').style.display = 'inline-block';
+                csvFileLoaded = true;
+            } else if (zoneId === 'dropZoneTally') {
+                await processTallyJSON(files);
+                document.getElementById('statusTally').style.display = 'inline-block';
+                jsonFileLoaded = true;
+            }
+            
+            if (csvFileLoaded && jsonFileLoaded) {
+                document.getElementById('btnRunAudit').style.display = 'block';
+            }
+        }
+
+        async function processSystemCSV(files) {
+            systemDataMap.clear();
+            for (let i = 0; i < files.length; i++) {
+                const text = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsText(files[i]); });
+                const rows = parseCSV(text);
+                
+                rows.forEach(r => {
+                    if (r.length >= 21 && r[13] && r[13].includes("Style Code")) {
+                        let desc = r[16].trim(); 
+                        let size = r[17].trim(); 
+                        let color = r[18].trim();
+                        let soh = parseInt(r[20]) || 0;
+                        
+                        if (soh >= 0) {
+                            let key = makeKey(desc, color, size);
+                            if (!systemDataMap.has(key)) {
+                                systemDataMap.set(key, { desc, color, size, sysSOH: 0 });
+                            }
+                            systemDataMap.get(key).sysSOH += soh;
+                        }
+                    }
+                });
+            }
+        }
+
+        async function processTallyJSON(files) {
+            physicalDataMap.clear();
+            for (let i = 0; i < files.length; i++) {
+                const text = await new Promise(res => { const r = new FileReader(); r.onload = e => res(e.target.result); r.readAsText(files[i]); });
+                try {
+                    let data = JSON.parse(text);
+                    if (data.data && Array.isArray(data.data)) data = data.data; 
+                    
+                    data.forEach(item => {
+                        let desc = item.brand.trim();
+                        let color = item.color.trim();
+                        let size = String(item.size).trim();
+                        let count = parseInt(item.count) || 0;
+                        
+                        let key = makeKey(desc, color, size);
+                        if (!physicalDataMap.has(key)) {
+                            physicalDataMap.set(key, 0);
+                        }
+                        physicalDataMap.set(key, physicalDataMap.get(key) + count);
+                    });
+                } catch(e) {
+                    alert(`Invalid Tally JSON file skipped: ${files[i].name}`);
+                }
+            }
+        }
+
+        function runAuditReconciliation() {
+            document.getElementById('dropGrid').style.display = 'none';
+            document.getElementById('btnRunAudit').style.display = 'none';
+            
+            let totalSysSOH = 0;
+            let totalPhySOH = 0;
+            let totalVariance = 0;
+            let activeStylesCount = 0;
+            
+            auditReportArray = [["Description", "Color", "Size", "System SOH", "Physical Count", "Variance", "Status"]];
+            let discrepancyHTML = "";
+            let discrepancyCount = 0;
+
+            const tbody = document.getElementById('previewBody');
+            tbody.innerHTML = "";
+            const fragment = document.createDocumentFragment();
+
+            const allKeys = new Set([...systemDataMap.keys(), ...physicalDataMap.keys()]);
+
+            allKeys.forEach(key => {
+                let sysObj = systemDataMap.get(key) || { desc: "Unknown", color: "Unknown", size: "Unknown", sysSOH: 0 };
+                let phyCount = physicalDataMap.get(key) || 0;
+                
+                if (sysObj.desc === "Unknown") {
+                    let parts = key.split('|');
+                    sysObj.desc = parts[0].toUpperCase();
+                    sysObj.color = parts[1].toUpperCase();
+                    sysObj.size = parts[2].toUpperCase();
+                }
+
+                if (sysObj.sysSOH === 0 && phyCount === 0) return;
+
+                activeStylesCount++;
+                totalSysSOH += sysObj.sysSOH;
+                totalPhySOH += phyCount;
+                
+                let variance = phyCount - sysObj.sysSOH;
+                totalVariance += variance;
+
+                let status = "Matched";
+                let varClass = "td-variance-good";
+                let varText = variance;
+
+                if (variance < 0) {
+                    status = "Missing";
+                    varClass = "td-variance-bad";
+                    discrepancyCount++;
+                    discrepancyHTML += `<li><span><strong>${escapeHTML(sysObj.desc)}</strong> (Col: ${escapeHTML(sysObj.color)}, Sz: ${escapeHTML(sysObj.size)})</span> <span class="tag-missing">MISSING ${Math.abs(variance)}</span></li>`;
+                } else if (variance > 0) {
+                    status = "Overage";
+                    varClass = "td-variance-extra";
+                    varText = "+" + variance;
+                    discrepancyCount++;
+                    discrepancyHTML += `<li><span><strong>${escapeHTML(sysObj.desc)}</strong> (Col: ${escapeHTML(sysObj.color)}, Sz: ${escapeHTML(sysObj.size)})</span> <span class="tag-extra">EXTRA ${variance}</span></li>`;
+                }
+
+                auditReportArray.push([sysObj.desc, sysObj.color, sysObj.size, sysObj.sysSOH, phyCount, variance, status]);
+
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${escapeHTML(sysObj.desc)}</strong></td>
+                    <td>${escapeHTML(sysObj.size)}</td>
+                    <td>${escapeHTML(sysObj.color)}</td>
+                    <td style="border-left: 2px solid #e2e8f0; font-weight:bold;">${sysObj.sysSOH}</td>
+                    <td style="font-weight:bold; color:#6d28d9;">${phyCount}</td>
+                    <td class="${varClass}">${varText}</td>
+                `;
+                fragment.appendChild(tr);
+            });
+
+            tbody.appendChild(fragment);
+
+            document.getElementById('statSysRows').innerText = activeStylesCount.toLocaleString();
+            document.getElementById('statSysSOH').innerText = totalSysSOH.toLocaleString();
+            document.getElementById('statPhySOH').innerText = totalPhySOH.toLocaleString();
+            
+            const varEl = document.getElementById('statVariance');
+            varEl.innerText = (totalVariance > 0 ? "+" : "") + totalVariance.toLocaleString();
+            if (totalVariance < 0) varEl.style.color = "#dc2626";
+            
+            document.getElementById('dashboard').style.display = 'grid';
+
+            const alertsContainer = document.getElementById('alertsContainer');
+            if (discrepancyCount > 0) {
+                document.getElementById('alertsTitle').innerText = `🚨 ${discrepancyCount} Discrepancies Found`;
+                document.getElementById('alertsList').innerHTML = discrepancyHTML;
+                alertsContainer.style.background = "#fff1f2";
+                alertsContainer.style.borderColor = "#fecaca";
+            } else {
+                document.getElementById('alertsTitle').innerText = `✅ Perfect Match!`;
+                document.getElementById('alertsTitle').style.color = "#059669";
+                document.getElementById('alertsList').innerHTML = "<li><span>Your physical count exactly matches the system data. Incredible!</span></li>";
+                alertsContainer.style.background = "#f0fdf4";
+                alertsContainer.style.borderColor = "#bbf7d0";
+            }
+            alertsContainer.style.display = 'block';
+            document.getElementById('previewContainer').style.display = 'block';
+            document.getElementById('actionButtons').style.display = 'flex';
+        }
+
+        function filterTable() {
+            let filter = document.getElementById("searchInput").value.toUpperCase();
+            let trs = document.getElementById("previewBody").getElementsByTagName("tr");
+            for (let i = 0; i < trs.length; i++) {
+                trs[i].style.display = (trs[i].textContent || trs[i].innerText).toUpperCase().indexOf(filter) > -1 ? "" : "none";
+            }
+        }
+
+        function downloadAuditReport() {
+            let csvContent = auditReportArray.map(r => r.map(v => `"${String(v).replace(/"/g, '""')}"`).join(",")).join("\n");
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const a = document.createElement('a'); 
+            a.href = window.URL.createObjectURL(blob); 
+            a.download = `UMOJA_AUDIT_REPORT_${new Date().toISOString().slice(0,10)}.csv`; 
+            a.click();
+        }
+
+        function parseCSV(text) {
+            const rows = []; let row = [], inQuotes = false, val = "";
+            for (let i = 0; i < text.length; i++) {
+                let char = text[i];
+                if (char === '"' && text[i+1] === '"') { val += '"'; i++; } 
+                else if (char === '"') { inQuotes = !inQuotes; } 
+                else if (char === ',' && !inQuotes) { row.push(val.trim()); val = ""; } 
+                else if (char === '\n' && !inQuotes) { row.push(val.trim()); rows.push(row); row = []; val = ""; } 
+                else if (char !== '\r') { val += char; }
+            }
+            if (val || row.length > 0) { row.push(val.trim()); rows.push(row); }
+            return rows;
+        }
+    </script>
+</body>
+</html>
