@@ -2,8 +2,8 @@
    UMOJA Tracker - Service Worker v12.1
    Provides full offline functionality & caching
 ========================================== */
-const CACHE_NAME = "umoja-tracker-cache-v12.1";
-const CACHE_VERSION = "v12.1";
+const CACHE_NAME = "umoja-tracker-cache-v12.2";
+const CACHE_VERSION = "v12.2";
 
 // Core assets that must be cached immediately on install
 const CORE_ASSETS = [
