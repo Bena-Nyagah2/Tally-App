@@ -1,9 +1,9 @@
-// App.js - V12.0 (Complete Master Edition with Keyboard & Tutorial)
+// App.js - V12.1 (The Fully Restored Master Edition)
 (function() {
   /* ------------------------
      STORAGE + HELPERS
   ------------------------ */
-  const STORE_KEY = "shoe_entries_json_v12.0";
+  const STORE_KEY = "shoe_entries_json_v12.1";
   const NOTES_KEY = "shoe_tracker_notes_v1";
   const HALF_SIZE_KEY = "shoe_tracker_halfsize_v1";
   const CATALOG_KEY = "shoe_master_catalog";
@@ -12,6 +12,8 @@
   let hasUnsavedChanges = false;
   let autoSaveTimer = null;
   let masterCatalog = null;
+
+  const $ = id => document.getElementById(id);
 
   function uid(){
     if(window.crypto && crypto.randomUUID) return crypto.randomUUID();
@@ -71,6 +73,35 @@
   }
 
   /* ------------------------
+     PREFERENCES & NOTES
+  ------------------------ */
+  function loadNotes() {
+    try {
+      const notes = localStorage.getItem(NOTES_KEY);
+      if (notes && $("exportNotes")) $("exportNotes").value = notes;
+    } catch (error) {}
+  }
+
+  function saveNotes() {
+    try { if ($("exportNotes")) localStorage.setItem(NOTES_KEY, $("exportNotes").value.trim()); } catch (error) {}
+  }
+
+  function loadHalfSizePreference() {
+    try {
+      const saved = localStorage.getItem(HALF_SIZE_KEY);
+      const checkbox = $("includeHalfSizes");
+      if (checkbox) {
+        if (saved !== null) checkbox.checked = saved === 'true';
+        else { checkbox.checked = false; localStorage.setItem(HALF_SIZE_KEY, 'false'); }
+      }
+    } catch (error) {}
+  }
+
+  function saveHalfSizePreference() {
+    try { if ($("includeHalfSizes")) localStorage.setItem(HALF_SIZE_KEY, $("includeHalfSizes").checked.toString()); } catch (error) {}
+  }
+
+  /* ------------------------
      SMART CATALOG (JSON + CSV)
   ------------------------ */
   function parseCSV(text) {
@@ -85,6 +116,16 @@
       }
       if (val || row.length > 0) { row.push(val.trim()); rows.push(row); }
       return rows;
+  }
+
+  function parseJavaScriptJSON(content) {
+    try {
+      content = content.replace(/\/\/.*$/gm, '').replace(/\/\*[\s\S]*?\*\//g, '').trim();
+      const regex = /^(?:const|let|var)\s+\w+\s*=\s*/;
+      if (regex.test(content)) content = content.replace(regex, '');
+      if (content.endsWith(';')) content = content.substring(0, content.length - 1);
+      return JSON.parse(content.trim());
+    } catch (error) { throw new Error("Invalid format"); }
   }
 
   function loadCatalog() {
@@ -131,7 +172,8 @@
             });
             if (Object.keys(generatedCatalog).length === 0) throw new Error("No valid products found in this CSV.");
         } else if (file.name.toLowerCase().endsWith('.json')) {
-            generatedCatalog = JSON.parse(content);
+            try { generatedCatalog = JSON.parse(content); } 
+            catch(err) { generatedCatalog = parseJavaScriptJSON(content); }
         } else {
             throw new Error("Please upload a .csv or .json file.");
         }
@@ -266,8 +308,6 @@
   /* ------------------------
      UI & MODALS
   ------------------------ */
-  const $ = id => document.getElementById(id);
-
   function escapeHtml(text) {
     if (typeof text !== 'string') return text;
     return text.replace(/[&<>"']/g, function(m) { return {'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'}[m]; });
@@ -324,7 +364,9 @@
     { title: "Welcome to TRM Shoe Tracker 👟", content: "This app helps you track your shoe inventory efficiently. Let's take a quick tour!", icon: `👟` },
     { title: "Adding Shoes", content: "1. Enter brand name<br>2. Enter color<br>3. Use the custom keyboard for sizes (e.g., '38-40' or '42*3')<br>4. Click Save", icon: `⌨️` },
     { title: "Managing Inventory", content: "Your shoes appear in the table below:<br>• Click ➕ to increase count<br>• Click ➖ to decrease count<br>• Click 🗑️ to delete an item", icon: `📊` },
-    { title: "Catalog & Smart Suggestions", content: "• Click <strong>Update Catalog</strong> to upload your Official Umoja System CSV<br>• Get smart auto-complete suggestions as you type to prevent typos!", icon: `📚` }
+    { title: "Search & Sort", content: "• Use the search box to filter by brand, color, or size<br>• Click column headers to sort (▲ for ascending, ▼ for descending)", icon: `🔍` },
+    { title: "Export & Import", content: "• <strong>Export Options</strong>: Create JSON or Excel files<br>• <strong>Import JSON</strong>: Add or replace data<br>• <strong>Print Inventory</strong>: Generate PDF report", icon: `📥` },
+    { title: "Catalog & Smart Suggestions", content: "• Click <strong>Update Catalog</strong> to upload your Official System CSV<br>• Get smart auto-complete suggestions as you type!", icon: `📚` }
   ];
 
   function showTutorial() { tutorialActive = true; currentTutorialStep = 0; showTutorialStep(currentTutorialStep); }
@@ -342,6 +384,9 @@
       <div class="tutorial-content">
         <button id="tutorialClose" class="tutorial-close">&times;</button>
         <div class="tutorial-header"><div class="tutorial-icon">${step.icon}</div><h3 class="tutorial-title">${step.title}</h3><div class="tutorial-text">${step.content}</div></div>
+        <div class="tutorial-dots">
+            ${tutorialSteps.map((_, i) => `<div class="tutorial-dot ${i === stepIndex ? 'active' : ''}" onclick="showTutorialStep(${i})"></div>`).join('')}
+        </div>
         <div class="tutorial-actions">
           <button id="tutorialPrev" class="btn-secondary" ${stepIndex === 0 ? 'disabled style="opacity:0.5"' : ''}>← Previous</button>
           <button id="tutorialNext" class="btn-primary">${stepIndex === tutorialSteps.length - 1 ? 'Finish 🎉' : 'Next →'}</button>
@@ -523,13 +568,21 @@
   function deleteById(id){
     const data = loadData(); const item = data.find(r=>r.id===id); if(!item) return;
     openModal({ message: `Delete ${item.brand} ${item.color} size ${item.size}?`, buttons:[ 
-        { label:"Delete", color: "var(--danger)", onClick: ()=>{ saveData(loadData().filter(r=>r.id!==id)); markAsUnsaved(); render($("searchBox").value); toast("🗑️ Deleted", "#e74c3c"); }}, 
+        { label:"Delete", color: "var(--danger)", onClick: ()=>{
+            const row = document.querySelector(`tr[data-id="${id}"]`);
+            if(row){
+                row.classList.add("fade-out");
+                row.addEventListener("animationend", ()=>{
+                    saveData(loadData().filter(r=>r.id!==id)); markAsUnsaved(); render($("searchBox").value); toast("🗑️ Deleted", "#e74c3c");
+                }, {once:true});
+            } else { saveData(loadData().filter(r=>r.id!==id)); markAsUnsaved(); render($("searchBox").value); }
+        }}, 
         { label:"Cancel", color:"#888", onClick: ()=> {} } 
     ]});
   }
 
   /* ------------------------
-     EXPORT & PRINT (PRESERVED)
+     IMPORT, EXPORT & MERGE
   ------------------------ */
   function exportJson(){
     const data = loadData(); if(!data.length) return toast("❌ No data", "#e74c3c");
@@ -543,10 +596,12 @@
     setTimeout(() => {
         const wsData = [["Brand", "Color", "Size", "Count"]];
         data.forEach(item => wsData.push([item.brand, item.color, item.size, item.count]));
-        const ws = XLSX.utils.aoa_to_sheet(wsData);
-        const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Inventory");
-        XLSX.writeFile(wb, `Tally_${new Date().toISOString().slice(0,10)}.xlsx`);
-        hideLoader(); toast("📊 Excel exported", "#27ae60");
+        if(typeof XLSX !== 'undefined') {
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            const wb = XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb, ws, "Inventory");
+            XLSX.writeFile(wb, `Tally_${new Date().toISOString().slice(0,10)}.xlsx`);
+            hideLoader(); toast("📊 Excel exported", "#27ae60");
+        } else { hideLoader(); toast("❌ XLSX Library missing", "#e74c3c"); }
     }, 500);
   }
 
@@ -566,14 +621,36 @@
             ${notes ? `<div style="padding:10px; border-left:4px solid #2980b9; background:#f9f9f9; margin-top:20px; color: #000;"><strong>Notes:</strong><br>${escapeHtml(notes)}</div>` : ''}
           </div>`;
         const opt = { margin: 0.5, filename: `Report_${new Date().toISOString().slice(0,10)}.pdf`, jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' } };
-        html2pdf().from(pdfContent).set(opt).save().then(() => hideLoader());
+        if(typeof html2pdf !== 'undefined') html2pdf().from(pdfContent).set(opt).save().then(() => hideLoader());
+        else { hideLoader(); toast("❌ PDF Library missing", "#e74c3c"); }
     }, 500);
+  }
+
+  function mergeData(importedData) {
+    try {
+      const existingData = loadData();
+      const mergedData = [...existingData];
+      const newIds = [];
+      importedData.forEach(importedItem => {
+        const normalizedItem = normalizeRow(importedItem);
+        const key = mergeKey(normalizedItem);
+        const existingIndex = mergedData.findIndex(item => mergeKey(item) === key);
+        if (existingIndex >= 0) mergedData[existingIndex].count += normalizedItem.count;
+        else { mergedData.push(normalizedItem); newIds.push(normalizedItem.id); }
+      });
+      if (saveData(mergedData)) { render($("searchBox").value, newIds); return true; }
+      return false;
+    } catch (error) { return false; }
   }
 
   // --- INITIALIZATION ---
   function initialize() {
-    loadCatalog(); startAutoSave();
+    loadCatalog(); 
+    loadNotes();
+    loadHalfSizePreference();
+    startAutoSave();
     
+    // Table Listeners
     if ($("tableBody")) $("tableBody").addEventListener("click", ev => {
         const inc = ev.target.closest(".btn-increase"), dec = ev.target.closest(".btn-decrease"), del = ev.target.closest(".btn-delete");
         if(inc) return increaseById(inc.dataset.id); if(dec) return decreaseById(dec.dataset.id); if(del) return deleteById(del.dataset.id);
@@ -589,10 +666,33 @@
 
     if ($("searchBox")) $("searchBox").addEventListener("input", e => render(e.target.value));
     
-    function saveNotes() { if($("exportNotes")) localStorage.setItem(NOTES_KEY, $("exportNotes").value.trim()); }
-    if($("exportNotes") && localStorage.getItem(NOTES_KEY)) $("exportNotes").value = localStorage.getItem(NOTES_KEY);
+    // Notes Toolbar
     if($("exportNotes")) $("exportNotes").addEventListener("input", () => { saveNotes(); markAsUnsaved(); });
+    
+    if($("fmtBold") && $("fmtItalic") && $("fmtList")) {
+      const insertFormat = (before, after) => {
+        const en = $("exportNotes"); const start = en.selectionStart; const end = en.selectionEnd;
+        const text = en.value; const selection = text.substring(start, end);
+        en.value = text.substring(0, start) + before + selection + after + text.substring(end);
+        en.focus(); en.selectionStart = start + before.length; en.selectionEnd = end + before.length;
+        saveNotes(); markAsUnsaved();
+      };
+      $("fmtBold").addEventListener("click", () => insertFormat("**", "**"));
+      $("fmtItalic").addEventListener("click", () => insertFormat("*", "*"));
+      $("fmtList").addEventListener("click", () => {
+         const en = $("exportNotes"); const start = en.selectionStart; const end = en.selectionEnd; const text = en.value;
+         if(start === end) insertFormat("\n- ", "");
+         else {
+           const formatted = text.substring(start, end).split('\n').map(l => `- ${l}`).join('\n');
+           en.value = text.substring(0, start) + formatted + text.substring(end); saveNotes(); markAsUnsaved();
+         }
+      });
+    }
 
+    // Half Sizes Checkbox
+    if ($("includeHalfSizes")) $("includeHalfSizes").addEventListener("change", function() { saveHalfSizePreference(); updateInputCount(); });
+
+    // Buttons
     if ($("exportBtn")) {
       $("exportBtn").addEventListener("click", function(){
         openModal({ message: "Export Options", buttons:[
@@ -603,6 +703,38 @@
       });
     }
 
+    if ($("importBtn") && $("jsonFileInput")) {
+      $("importBtn").addEventListener("click", () => $("jsonFileInput").click());
+      $("jsonFileInput").addEventListener("change", e => {
+          const file = e.target.files[0]; if(!file) return;
+          showLoader("Importing...");
+          const reader = new FileReader();
+          reader.onload = ev => {
+              try {
+                  const json = JSON.parse(ev.target.result);
+                  if(json.length === 0) { hideLoader(); return toast("⚠️ Empty file", "#f39c12"); }
+                  hideLoader();
+                  openModal({ message: "Import Options", subtext: "Merge with current data, or replace everything?", buttons:[
+                      { label:"Merge", color:"#27ae60", onClick: ()=> { if(mergeData(json)) toast("✅ Merged", "#27ae60"); } },
+                      { label:"Replace", color:"#e74c3c", onClick: ()=> { if(saveData(json)) { render(); toast("✅ Replaced", "#27ae60"); } } },
+                      { label:"Cancel", color:"#888", onClick: ()=>{} }
+                  ]});
+              } catch(err) { hideLoader(); toast("❌ Invalid JSON", "#e74c3c"); }
+          };
+          reader.readAsText(file); e.target.value = "";
+      });
+    }
+
+    if ($("clearBtn")) {
+      $("clearBtn").addEventListener("click", () => {
+          if(!loadData().length) return toast("ℹ️ Already empty", "#888");
+          openModal({ message: "Clear all items?", subtext: "This cannot be undone.", buttons:[
+              { label:"Clear All", color:"#e74c3c", onClick: ()=> { saveData([]); $("exportNotes").value = ""; saveNotes(); render(); toast("🧹 Cleared", "#888"); } },
+              { label:"Cancel", color:"#888", onClick: ()=>{} }
+          ]});
+      });
+    }
+
     if ($("printBtn")) $("printBtn").addEventListener("click", printPDF);
 
     if ($("updateCatalogBtn") && $("catalogFileInput")) {
@@ -610,14 +742,26 @@
       $("catalogFileInput").addEventListener("change", handleCatalogUpload);
     }
 
+    // Theme Switcher
+    if ($("themeToggleBtn")) {
+        const savedTheme = localStorage.getItem("shoe_tracker_theme");
+        if (savedTheme) document.body.classList.add(savedTheme);
+        $("themeToggleBtn").addEventListener("click", () => {
+            const isDark = document.body.classList.contains("dark-mode");
+            document.body.classList.remove(isDark ? "dark-mode" : "light-mode");
+            document.body.classList.add(isDark ? "light-mode" : "dark-mode");
+            localStorage.setItem("shoe_tracker_theme", isDark ? "light-mode" : "dark-mode");
+        });
+    }
+
+    // Inputs
     if ($("brand")) {
       $("brand").addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); $("color").focus(); } });
       $("brand").addEventListener('input', e => updateColorDatalist(e.target.value.trim()));
     }
-
     if ($("color")) {
       $("color").addEventListener('keydown', e => { 
-          if (e.key === 'Enter') { e.preventDefault(); if ($("sizes-display")) { $("sizes-display").style.borderColor = "var(--primary)"; } } 
+          if (e.key === 'Enter') { e.preventDefault(); if ($("sizes-display")) $("sizes-display").style.borderColor = "var(--primary)"; } 
       });
     }
 
@@ -629,13 +773,12 @@
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', initialize); else initialize();
 
-  // Expose to global for custom keyboard
   window.saveFormEntry = saveFormEntry; 
   window.calculateInputCount = calculateInputCount;
 })();
 
 // ========================
-// CUSTOM KEYBOARD FUNCTIONALITY (PRESERVED EXACTLY AS YOU WROTE IT)
+// CUSTOM KEYBOARD FUNCTIONALITY
 // ========================
 
 document.addEventListener('DOMContentLoaded', function() {
@@ -660,10 +803,8 @@ document.addEventListener('DOMContentLoaded', function() {
     let cursorPosition = 0;
     let isCursorVisible = false;
     
-    // Initialize display
     updateRealInput(sizesRealInput.value || '');
     
-    // Function to update the visual cursor
     function updateCursor() {
       try {
         const value = sizesRealInput.value;
@@ -673,53 +814,37 @@ document.addEventListener('DOMContentLoaded', function() {
         if (value) {
           sizesValueSpan.textContent = '';
           sizesPlaceholderSpan.style.display = 'none';
-          
           textBeforeSpan.textContent = beforeText;
           textAfterSpan.textContent = afterText;
-          
           textBeforeSpan.style.display = 'inline';
           cursorSpan.style.display = 'inline-block';
           textAfterSpan.style.display = 'inline';
-          
-          // Ensure cursor is visible
           if (!isCursorVisible) {
             isCursorVisible = true;
             cursorSpan.style.animation = 'blink 1s infinite';
           }
         } else {
-          // No value, show placeholder
           sizesValueSpan.textContent = '';
           textBeforeSpan.style.display = 'none';
           cursorSpan.style.display = 'none';
           textAfterSpan.style.display = 'none';
           sizesPlaceholderSpan.style.display = 'inline';
         }
-      } catch (error) {
-        console.error("Error updating cursor:", error);
-      }
+      } catch (error) {}
     }
     
-    // Modified updateRealInput function
     function updateRealInput(value) {
       try {
-        if (sizesRealInput) {
-          sizesRealInput.value = value;
-        }
-        
-        // Ensure cursor stays within bounds
+        if (sizesRealInput) sizesRealInput.value = value;
         cursorPosition = Math.min(cursorPosition, value.length);
-        
         updateCursor();
         
-        // Update input count
         const inputCount = document.getElementById("inputCount");
         if (inputCount) {
-          // Use the calculateInputCount function from the main app
           const count = window.calculateInputCount ? window.calculateInputCount(value) : 0;
           inputCount.textContent = `Input count: ${count}`;
         }
         
-        // Update display styling
         if (value) {
           sizesDisplay.style.borderColor = "var(--accent)";
           sizesDisplay.style.boxShadow = "0 0 0 2px rgba(41, 128, 185, 0.2)";
@@ -727,18 +852,11 @@ document.addEventListener('DOMContentLoaded', function() {
           sizesDisplay.style.borderColor = "";
           sizesDisplay.style.boxShadow = "";
         }
-      } catch (error) {
-        console.error("Error updating real input:", error);
-      }
+      } catch (error) {}
     }
     
-    // Clear display function
-    function clearSizesDisplay() {
-      cursorPosition = 0;
-      updateRealInput('');
-    }
+    function clearSizesDisplay() { cursorPosition = 0; updateRealInput(''); }
     
-    // Handle clicks on the display div - set cursor position
     sizesDisplay.addEventListener('click', function(e) {
       try {
         if (!sizesRealInput.value) {
@@ -746,204 +864,78 @@ document.addEventListener('DOMContentLoaded', function() {
           sizesDisplay.style.boxShadow = "0 0 0 2px rgba(41, 128, 185, 0.2)";
           return;
         }
-        
-        // Get click position relative to the text
         const rect = sizesDisplay.getBoundingClientRect();
         const clickX = e.clientX - rect.left - 10;
-        
-        // Simple approximation - each character ~8px wide
         const approxChars = Math.floor(clickX / 8);
         cursorPosition = Math.max(0, Math.min(sizesRealInput.value.length, approxChars));
-        
         updateCursor();
-        
         sizesDisplay.style.borderColor = "var(--accent)";
         sizesDisplay.style.boxShadow = "0 0 0 2px rgba(41, 128, 185, 0.2)";
-        
-        // Blur any focused input elements
-        if (document.activeElement && document.activeElement.tagName === 'INPUT') {
-          document.activeElement.blur();
-        }
-      } catch (error) {
-        console.error("Error handling click on sizes display:", error);
-      }
+        if (document.activeElement && document.activeElement.tagName === 'INPUT') document.activeElement.blur();
+      } catch (error) {}
     });
     
-    // Handle key presses with cursor positioning
     keyButtons.forEach(button => {
-      if (button.classList.contains('backspace') || 
-          button.classList.contains('done') || 
-          button.classList.contains('clear') ||
-          button.classList.contains('arrow-left') ||
-          button.classList.contains('arrow-right')) return;
-      
+      if (button.classList.contains('backspace') || button.classList.contains('done') || button.classList.contains('clear') || button.classList.contains('arrow-left') || button.classList.contains('arrow-right')) return;
       button.addEventListener('click', function() {
         try {
           const key = this.getAttribute('data-key');
           const currentValue = sizesRealInput.value;
-          
-          // Insert at cursor position
-          const newValue = currentValue.substring(0, cursorPosition) + 
-                          key + 
-                          currentValue.substring(cursorPosition);
-          
+          const newValue = currentValue.substring(0, cursorPosition) + key + currentValue.substring(cursorPosition);
           cursorPosition += key.length;
           updateRealInput(newValue);
-          
-          // Ensure no input has focus
-          if (document.activeElement && document.activeElement.tagName === 'INPUT') {
-            document.activeElement.blur();
-          }
-        } catch (error) {
-          console.error("Error handling key press:", error);
-        }
+          if (document.activeElement && document.activeElement.tagName === 'INPUT') document.activeElement.blur();
+        } catch (error) {}
       });
     });
     
-    // Handle arrow left button
-    if (arrowLeftBtn) {
-      arrowLeftBtn.addEventListener('click', function() {
-        try {
-          if (cursorPosition > 0) {
-            cursorPosition--;
-            updateCursor();
-          }
-        } catch (error) {
-          console.error("Error handling arrow left:", error);
-        }
-      });
-    }
+    if (arrowLeftBtn) arrowLeftBtn.addEventListener('click', function() { if (cursorPosition > 0) { cursorPosition--; updateCursor(); } });
+    if (arrowRightBtn) arrowRightBtn.addEventListener('click', function() { if (cursorPosition < sizesRealInput.value.length) { cursorPosition++; updateCursor(); } });
     
-    // Handle arrow right button
-    if (arrowRightBtn) {
-      arrowRightBtn.addEventListener('click', function() {
-        try {
-          if (cursorPosition < sizesRealInput.value.length) {
-            cursorPosition++;
-            updateCursor();
-          }
-        } catch (error) {
-          console.error("Error handling arrow right:", error);
-        }
-      });
-    }
-    
-    // Handle backspace
     if (backspaceBtn) {
-      let backspaceTimeout = null;
-      let backspaceInterval = null;
-      let isLongPressActive = false;
-      
+      let backspaceTimeout = null, backspaceInterval = null, isLongPressActive = false;
       const startBackspace = () => {
-        try {
-          if (cursorPosition > 0) {
-            const currentValue = sizesRealInput.value;
-            const newValue = currentValue.substring(0, cursorPosition - 1) + 
-                            currentValue.substring(cursorPosition);
-            
-            cursorPosition--;
-            updateRealInput(newValue);
-          }
-        } catch (error) {
-          console.error("Error in backspace:", error);
+        if (cursorPosition > 0) {
+          const currentValue = sizesRealInput.value;
+          const newValue = currentValue.substring(0, cursorPosition - 1) + currentValue.substring(cursorPosition);
+          cursorPosition--; updateRealInput(newValue);
         }
       };
-      
       const handleBackspaceStart = (e) => {
         isLongPressActive = false;
-        
-        backspaceTimeout = setTimeout(() => {
-          isLongPressActive = true;
-          startBackspace();
-          backspaceInterval = setInterval(startBackspace, 100);
-        }, 500);
+        backspaceTimeout = setTimeout(() => { isLongPressActive = true; startBackspace(); backspaceInterval = setInterval(startBackspace, 100); }, 500);
       };
+      const handleBackspaceEnd = () => { clearTimeout(backspaceTimeout); clearInterval(backspaceInterval); backspaceTimeout = null; backspaceInterval = null; isLongPressActive = false; };
       
-      const handleBackspaceEnd = () => {
-        clearTimeout(backspaceTimeout);
-        clearInterval(backspaceInterval);
-        backspaceTimeout = null;
-        backspaceInterval = null;
-        isLongPressActive = false;
-      };
-      
-      // For mouse devices
       backspaceBtn.addEventListener('mousedown', handleBackspaceStart);
       backspaceBtn.addEventListener('mouseup', handleBackspaceEnd);
       backspaceBtn.addEventListener('mouseleave', handleBackspaceEnd);
-      
-      // For touch devices
       backspaceBtn.addEventListener('touchstart', handleBackspaceStart);
       backspaceBtn.addEventListener('touchend', handleBackspaceEnd);
       backspaceBtn.addEventListener('touchcancel', handleBackspaceEnd);
-      
-      // Handle regular click
-      backspaceBtn.addEventListener('click', function(e) {
-        try {
-          if (!isLongPressActive && !backspaceInterval) {
-            startBackspace();
-          }
-        } catch (error) {
-          console.error("Error in backspace click:", error);
-        }
-      });
+      backspaceBtn.addEventListener('click', function(e) { if (!isLongPressActive && !backspaceInterval) startBackspace(); });
     }
     
-    // Clear button
-    if (clearBtn) {
-      clearBtn.addEventListener('click', function() {
-        try {
-          clearSizesDisplay();
-        } catch (error) {
-          console.error("Error clearing sizes:", error);
-        }
-      });
-    }
+    if (clearBtn) clearBtn.addEventListener('click', clearSizesDisplay);
     
-    // Save/Done button
     if (doneBtn) {
       doneBtn.addEventListener('click', function() {
         try {
-          // Call saveFormEntry if it exists
-          if (typeof window.saveFormEntry === 'function') {
-            window.saveFormEntry();
-          } else {
-            // Fallback: just submit the form
-            const form = document.getElementById('entryForm');
-            if (form) form.dispatchEvent(new Event('submit'));
-          }
-          
-          sizesDisplay.style.borderColor = "";
-          sizesDisplay.style.boxShadow = "";
-          
-          if (document.activeElement && document.activeElement.tagName === 'INPUT') {
-            document.activeElement.blur();
-          }
-        } catch (error) {
-          console.error("Error in done button:", error);
-        }
+          if (typeof window.saveFormEntry === 'function') window.saveFormEntry();
+          else { const form = document.getElementById('entryForm'); if (form) form.dispatchEvent(new Event('submit')); }
+          sizesDisplay.style.borderColor = ""; sizesDisplay.style.boxShadow = "";
+          if (document.activeElement && document.activeElement.tagName === 'INPUT') document.activeElement.blur();
+        } catch (error) {}
       });
     }
     
-    // Double click to clear all sizes
-    sizesDisplay.addEventListener('dblclick', function(e) {
-      try {
-        clearSizesDisplay();
-      } catch (error) {
-        console.error("Error in double click:", error);
-      }
-    });
-    
-    // Initialize cursor
+    sizesDisplay.addEventListener('dblclick', clearSizesDisplay);
     updateCursor();
     
-    // Make functions available globally
     window.clearSizesDisplay = clearSizesDisplay;
     window.updateCursor = updateCursor;
     window.cursorPosition = cursorPosition;
     window.updateRealInput = updateRealInput;
     
-  } catch (error) {
-    console.error("Error initializing custom keyboard:", error);
-  }
+  } catch (error) {}
 });
